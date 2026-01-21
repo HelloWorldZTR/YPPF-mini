@@ -1,0 +1,41 @@
+<script lang="ts" setup>
+import { storeToRefs } from 'pinia'
+import { useUserStore } from '@/store'
+import { useTokenStore } from '@/store/token'
+
+const userStore = useUserStore()
+const tokenStore = useTokenStore()
+// 使用storeToRefs解构userInfo
+const { userInfo } = storeToRefs(userStore)
+</script>
+
+<template>
+  <view class="min-h-screen bg-gray-50 pb-10">
+    <view class="p-4">
+      <view class="mb-4">
+        <text class="text-lg font-bold">调试信息</text>
+      </view>
+      <view class="mb-4">
+        <text>Token: {{ tokenStore.updateNowTime().validToken || '无' }}</text>
+      </view>
+      <view class="mb-4">
+        <text>Token Status: {{ tokenStore.updateNowTime().validToken ? '有效' : '无效' }}</text>
+      </view>
+      <button
+        class="rounded bg-red-500 px-4 py-2 text-white"
+        @click="tokenStore.logout()"
+      >
+        清除Token
+      </button>
+    </view>
+  </view>
+</template>
+
+<style lang="scss" scoped>
+/* 可以在这里添加一些针对深色/浅色模式或特定细节的微调 */
+button {
+  &::after {
+    border: none;
+  }
+}
+</style>

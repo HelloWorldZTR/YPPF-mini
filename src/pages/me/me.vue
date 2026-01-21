@@ -1,5 +1,9 @@
 <script lang="ts" setup>
+import { on } from 'node:events'
 import { storeToRefs } from 'pinia'
+import {
+  getNotificationStatistics,
+} from '@/api/notification'
 import { LOGIN_PAGE } from '@/router/config'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
@@ -72,13 +76,52 @@ function handleNothing() {
   })
 }
 
+/* 通知红点显示逻辑 */
+const statistics = ref({
+  total: 0,
+  unread: 0,
+  read: 0,
+  need_read: 0,
+  need_do: 0,
+})
+const totalUnread = computed(() => (statistics.value.unread > 99 ? '99+' : statistics.value.unread))
+
+async function loadStatistics() {
+  try {
+    statistics.value = await getNotificationStatistics()
+  }
+  catch (error) {
+    console.error('加载统计失败:', error)
+  }
+}
+
+onMounted(() => {
+  if (tokenStore.hasLogin) {
+    loadStatistics()
+  }
+})
+
+// FIXME: back回来的时候应该更新
+onShow(() => {
+  if (tokenStore.hasLogin) {
+    loadStatistics()
+  }
+})
+
 // 菜单项
 const menuItems = [
-  { title: '个人资料', icon: 'i-carbon-user-profile', onClick: handleNothing },
   { title: '设置', icon: 'i-carbon-settings', onClick: handleNothing },
   { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
   { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
+  { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
 ]
+
+function handleProfile() {
+  uni.showToast({
+    title: '个人资料功能开发中，敬请期待~',
+    icon: 'none',
+  })
+}
 </script>
 
 <template>
@@ -98,11 +141,16 @@ const menuItems = [
         <!-- 文字信息 -->
         <view class="ml-4 flex-1 overflow-hidden">
           <template v-if="tokenStore.hasLogin">
-            <view class="truncate text-2xl text-white font-bold">
-              {{ userInfo.name || userInfo.username || '未设置昵称' }}
-            </view>
-            <view class="mt-1 truncate text-sm text-blue-100 opacity-80">
-              {{ userInfo.profile?.email || '暂无邮箱' }}
+            <view class="flex items-center justify-between">
+              <view class="">
+                <view class="truncate text-2xl text-white font-bold">
+                  {{ userInfo.name || userInfo.username || '未设置昵称' }}
+                </view>
+                <view class="mt-1 truncate text-sm text-blue-100 opacity-80">
+                  {{ userInfo.profile?.email || '暂无邮箱' }}
+                </view>
+              </view>
+              <view class="i-carbon-chevron-right px-4 text-lg text-white" @click="handleProfile" />
             </view>
           </template>
           <template v-else>
@@ -118,9 +166,25 @@ const menuItems = [
     </view>
 
     <!-- 功能卡片区 -->
-    <view class="mx-4 mt-[-40px]">
+    <view class="mx-4">
       <!-- 列表卡片 -->
       <view class="overflow-hidden rounded-2xl bg-white shadow-sm">
+        <view
+          class="flex items-center justify-between border-b border-gray-50 p-4 last:border-none active:bg-gray-50"
+          @click="() => uni.navigateTo({ url: '/pages/me/notifications' })"
+        >
+          <view class="flex items-center">
+            <view class="i-carbon-email mr-3 text-xl text-blue-600" />
+            <text class="text-base text-gray-800">我的通知</text>
+            <view
+              v-if="totalUnread > 0"
+              class="ml-2 inline-block rounded-full bg-red-500 px-2 py-0.5 text-xs text-white"
+            >
+              {{ totalUnread }}
+            </view>
+          </view>
+          <view class="i-carbon-chevron-right text-sm text-gray-300" />
+        </view>
         <view
           v-for="(item, index) in menuItems"
           :key="index"
