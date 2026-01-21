@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { onHide, onLaunch, onShow } from '@dcloudio/uni-app'
 import { navigateToInterceptor } from '@/router/interceptor'
+import { useTokenStore } from './store'
 
 onLaunch((options) => {
   console.log('App.vue onLaunch', options)
+  // 尝试自动登录
+  // #ifdef MP-WEIXIN
+  const tokenStore = useTokenStore()
+  tokenStore.wxLogin()
+  // #endif
 })
 onShow((options) => {
   console.log('App.vue onShow', options)

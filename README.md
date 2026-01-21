@@ -38,6 +38,34 @@ weixin平台：`pnpm dev:mp` 然后打开微信开发者工具，导入本地文
 - weixin平台：`pnpm build:mp`, 打包后的文件在 `dist/build/mp-weixin`，然后通过微信开发者工具导入，并点击右上角的“上传”按钮进行上传。
 - APP平台：`pnpm build:app`, 然后打开 `HBuilderX`，导入刚刚生成的`dist/build/app` 文件夹，选择发行 - APP云打包。(如果是 `安卓` 和 `鸿蒙` 平台，则不用这个方式，可以把整个unibest项目导入到hbx，通过hbx的菜单来发行到对应的平台。)
 
+## 项目概览
+
+
+### 核心配置文件
+- [package.json](mdc:package.json) - 项目依赖和脚本配置
+- [vite.config.ts](mdc:vite.config.ts) - Vite 构建配置
+- [pages.config.ts](mdc:pages.config.ts) - 页面路由配置
+- [manifest.config.ts](mdc:manifest.config.ts) - 应用清单配置
+- [uno.config.ts](mdc:uno.config.ts) - UnoCSS 配置
+
+### 主要目录结构
+- `src/pages/` - 页面文件
+- `src/components/` - 组件文件
+- `src/layouts/` - 布局文件
+- `src/api/` - API 接口
+- `src/http/` - HTTP 请求封装
+- `src/store/` - 状态管理
+- `src/tabbar/` - 底部导航栏
+- `src/App.ku.vue` - 全局根组件（类似 App.vue 里面的 template作用）
+
+### 开发命令
+- `pnpm dev` - 开发 H5 版本
+- `pnpm dev:mp` - 开发微信小程序
+- `pnpm dev:mp-alipay` - 开发支付宝小程序（含钉钉）
+- `pnpm dev:app` - 开发 APP 版本
+- `pnpm build` - 构建生产版本
+
+
 ## 📄 License
 
 [MIT](https://opensource.org/license/mit/)

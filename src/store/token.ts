@@ -159,7 +159,6 @@ export const useTokenStore = defineStore(
         console.log('微信登录-code: ', code)
         // 然后从后端换取jwt token
         const res = await _wxLogin(code)
-        console.log('微信登录-res: ', res)
         if (res.status === 'unbound') {
           // 未绑定账号，跳转到绑定页面
           uni.navigateTo({
@@ -170,10 +169,7 @@ export const useTokenStore = defineStore(
         console.log('微信登录-token: ', res)
         // 如果成功，储存token
         await _postLogin(res)
-        uni.showToast({
-          title: '登录成功',
-          icon: 'success',
-        })
+        console.log('成功登录，token已刷新')
         return res
       }
       catch (error) {

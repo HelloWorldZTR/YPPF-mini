@@ -34,19 +34,32 @@ async function handleLogin() {
   // #endif
 }
 
-function handleLogout() {
+function _unbind() {
+  throw new Error('Not implemented.')
+}
+
+function handleUnbind() {
   uni.showModal({
     title: '提示',
-    content: '确定要退出登录吗？',
+    content: '确定要解除绑定吗？',
     success: (res) => {
       if (res.confirm) {
         // 清空用户信息
         tokenStore.logout()
-        // 执行退出登录逻辑
-        uni.showToast({
-          title: '退出登录成功',
-          icon: 'success',
-        })
+
+        try {
+          _unbind()
+          uni.showToast({
+            title: '已解除绑定',
+            icon: 'success',
+          })
+        }
+        catch (error) {
+          uni.showToast({
+            title: '解除绑定功能开发中，敬请期待~',
+            icon: 'error',
+          })
+        }
       }
     },
   })
@@ -62,7 +75,6 @@ function handleNothing() {
 // 菜单项
 const menuItems = [
   { title: '个人资料', icon: 'i-carbon-user-profile', onClick: handleNothing },
-  { title: '账号绑定', icon: 'i-carbon-link', onClick: handleNothing },
   { title: '设置', icon: 'i-carbon-settings', onClick: handleNothing },
   { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
   { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
@@ -127,9 +139,9 @@ const menuItems = [
       <view v-if="tokenStore.hasLogin" class="mt-8 px-2">
         <button
           class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-red-500 font-medium shadow-sm transition-opacity active:opacity-70"
-          @click="handleLogout"
+          @click="handleUnbind"
         >
-          退出登录
+          解除绑定
         </button>
       </view>
     </view>

@@ -1,0 +1,288 @@
+openapi: 3.0.3
+info:
+  title: YPPF API
+  version: '2.0'
+  description: API documentation for YPPF platform
+paths:
+  /api/v2/notification/:
+    get:
+      operationId: v2_notification_list
+      description: List all notifications for the authenticated user
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -finish_time
+          - -start_time
+          - finish_time
+          - start_time
+        description: 'Order by field (default: -start_time)'
+      - in: query
+        name: status
+        schema:
+          type: integer
+          enum:
+          - 0
+          - 1
+          - 2
+        description: Filter by notification status
+      - in: query
+        name: typename
+        schema:
+          type: integer
+          enum:
+          - 0
+          - 1
+        description: Filter by notification type
+      tags:
+      - 通知
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: List of notifications
+  /api/v2/notification/{id}/:
+    get:
+      operationId: v2_notification_retrieve
+      description: Retrieve a specific notification by ID
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 o.通知消息 的 唯一整数值。
+        required: true
+      tags:
+      - 通知
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+        '404':
+          description: Notification not found
+        '403':
+          description: Permission denied
+  /api/v2/notification/{id}/toggle-status/:
+    post:
+      operationId: v2_notification_toggle_status_create
+      description: Toggle notification status (read <-> unread)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 o.通知消息 的 唯一整数值。
+        required: true
+      tags:
+      - 通知
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: Notification toggled successfully
+        '404':
+          description: Notification not found
+        '403':
+          description: Permission denied
+  /api/v2/notification/{id}/update-status/:
+    patch:
+      operationId: v2_notification_update_status_partial_update
+      description: Update notification status
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 o.通知消息 的 唯一整数值。
+        required: true
+      tags:
+      - 通知
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: Notification updated successfully
+        '400':
+          description: Invalid status
+        '404':
+          description: Notification not found
+        '403':
+          description: Permission denied
+  /api/v2/notification/delete-all-read/:
+    post:
+      operationId: v2_notification_delete_all_read_create
+      description: Delete all read notifications
+      tags:
+      - 通知
+      responses:
+        '200':
+          description: All read notifications deleted
+  /api/v2/notification/mark-all-read/:
+    post:
+      operationId: v2_notification_mark_all_read_create
+      description: Mark all unread notifications as read
+      tags:
+      - 通知
+      responses:
+        '200':
+          description: All notifications marked as read
+  /api/v2/notification/statistics/:
+    get:
+      operationId: v2_notification_statistics_retrieve
+      description: Get notification statistics for the current user
+      tags:
+      - 通知
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationStatistics'
+          description: ''
+ 
+components:
+  schemas:
+    
+    Notification:
+      type: object
+      description: Serializer for notification with all fields.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sender:
+          type: integer
+          readOnly: true
+        sender_name:
+          type: string
+          readOnly: true
+          description: Sender's name
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status881Enum'
+          minimum: -32768
+          maximum: 32767
+        status_display:
+          type: string
+          readOnly: true
+          description: Status display text
+        title:
+          type: string
+          nullable: true
+          title: 通知标题
+          maxLength: 50
+        title_display:
+          type: string
+          readOnly: true
+          description: Title display text
+        content:
+          type: string
+          title: 通知内容
+        start_time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 通知发出时间
+        finish_time:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: 通知处理时间
+        typename:
+          allOf:
+          - $ref: '#/components/schemas/TypenameEnum'
+          minimum: -32768
+          maximum: 32767
+        typename_display:
+          type: string
+          readOnly: true
+          description: Type display text
+        URL:
+          type: string
+          format: uri
+          nullable: true
+          title: 相关网址
+          maxLength: 1024
+        anonymous_flag:
+          type: boolean
+          title: 是否匿名
+      required:
+      - finish_time
+      - id
+      - sender
+      - sender_name
+      - start_time
+      - status_display
+      - title_display
+      - typename_display
+    NotificationStatistics:
+      type: object
+      description: Serializer for notification statistics.
+      properties:
+        total:
+          type: integer
+          description: Total number of notifications
+        unread:
+          type: integer
+          description: Number of unread notifications
+        read:
+          type: integer
+          description: Number of read notifications
+        need_read:
+          type: integer
+          description: Number of need_read type notifications
+        need_do:
+          type: integer
+          description: Number of need_do type notifications
+      required:
+      - need_do
+      - need_read
+      - read
+      - total
+      - unread
+    PatchedAnswerSheet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 填写时间
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AnswerSheetStatusEnum'
+          title: 状态
+          minimum: -32768
+          maximum: 32767
+        survey:
+          type: integer
+          title: 对应问卷
+    
