@@ -57,6 +57,12 @@ export const customTabbarList: CustomTabBarItem[] = [
     // badge: 'dot',
   },
   {
+    pagePath: 'pages/appoint/appoint',
+    text: '预约',
+    iconType: 'unocss',
+    icon: 'i-carbon-calendar',
+  },
+  {
     text: '应用',
     pagePath: 'pages/appmenu/appmenu',
     // 注意 unocss 图标需要如下处理：（二选一）
@@ -79,8 +85,6 @@ export const customTabbarList: CustomTabBarItem[] = [
   {
     pagePath: 'pages/me/me',
     text: '我的',
-    // 1）在fg-tabbar.vue页面上引入一下并注释掉（见tabbar/index.vue代码第2行）
-    // 2）配置到 unocss.config.ts 的 safelist 中
     iconType: 'unocss',
     icon: 'i-carbon-user',
     // badge: 10,
