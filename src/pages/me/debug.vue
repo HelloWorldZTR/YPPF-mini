@@ -2,7 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
-
+import { setGlobalError } from '@/utils/globalError'
 const userStore = useUserStore()
 const tokenStore = useTokenStore()
 // 使用storeToRefs解构userInfo
@@ -26,6 +26,15 @@ const { userInfo } = storeToRefs(userStore)
         @click="tokenStore.logout()"
       >
         清除Token
+      </button>
+      <button
+        class="rounded bg-green-500 px-4 py-2 text-white"
+        @click="()=>{
+          setGlobalError('test')
+          uni.switchTab({ url: '/pages/appoint/appoint' }
+          )}"
+      >
+        跳转预约页面(带错误信息)
       </button>
     </view>
   </view>

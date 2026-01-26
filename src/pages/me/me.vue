@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { on } from 'node:events'
+import { title } from 'node:process'
 import { storeToRefs } from 'pinia'
 import {
   getNotificationStatistics,
@@ -110,9 +111,11 @@ onShow(() => {
 
 // 菜单项
 const menuItems = [
-  { title: '设置', icon: 'i-carbon-settings', onClick: handleNothing },
-  { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
-  { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
+  { title: '我的预约', icon: 'i-carbon-calendar', onClick: () => uni.navigateTo({ url: '/pages/me/my-appointments' }) },
+  { title: '信用分记录', icon: 'i-carbon-star', onClick: () => uni.navigateTo({ url: '/pages/me/my-violations' }) },
+  // { title: '设置', icon: 'i-carbon-settings', onClick: handleNothing },
+  // { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
+  // { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
   { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
 ]
 

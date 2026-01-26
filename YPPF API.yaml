@@ -4,169 +4,991 @@ info:
   version: '2.0'
   description: API documentation for YPPF platform
 paths:
-  /api/v2/notification/:
+  /api/v2/appoint/agreement/:
     get:
-      operationId: v2_notification_list
-      description: List all notifications for the authenticated user
-      parameters:
-      - in: query
-        name: ordering
-        schema:
-          type: string
-          enum:
-          - -finish_time
-          - -start_time
-          - finish_time
-          - start_time
-        description: 'Order by field (default: -start_time)'
-      - in: query
-        name: status
-        schema:
-          type: integer
-          enum:
-          - 0
-          - 1
-          - 2
-        description: Filter by notification status
-      - in: query
-        name: typename
-        schema:
-          type: integer
-          enum:
-          - 0
-          - 1
-        description: Filter by notification type
+      operationId: v2_appoint_agreement_retrieve
+      description: 返回用户的协议签署信息
+      summary: 获取协议信息
       tags:
-      - 通知
+        - 预约
+      security:
+        - WxJWT Authentication: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Notification'
-          description: List of notifications
-  /api/v2/notification/{id}/:
-    get:
-      operationId: v2_notification_retrieve
-      description: Retrieve a specific notification by ID
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: 标识此 o.通知消息 的 唯一整数值。
-        required: true
-      tags:
-      - 通知
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Notification'
+                $ref: '#/components/schemas/AgreementResponse'
           description: ''
-        '404':
-          description: Notification not found
         '403':
-          description: Permission denied
-  /api/v2/notification/{id}/toggle-status/:
+          description: 未登录或无权限
     post:
-      operationId: v2_notification_toggle_status_create
-      description: Toggle notification status (read <-> unread)
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: 标识此 o.通知消息 的 唯一整数值。
-        required: true
+      operationId: v2_appoint_agreement_create
+      description: 用户签署协议
+      summary: 签署协议
       tags:
-      - 通知
+        - 预约
+      requestBody:
+        content:
+          type:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+          properties:
+            schema:
+              type:
+                type: string
+                enum:
+                  - confirm
+          required:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+      security:
+        - WxJWT Authentication: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Notification'
-          description: Notification toggled successfully
-        '404':
-          description: Notification not found
+                type: object
+                properties:
+                  message:
+                    type: string
+          description: 协议签署成功
+        '400':
+          description: 签署失败
         '403':
-          description: Permission denied
-  /api/v2/notification/{id}/update-status/:
-    patch:
-      operationId: v2_notification_update_status_partial_update
-      description: Update notification status
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: 标识此 o.通知消息 的 唯一整数值。
-        required: true
+          description: 未登录或无权限
+  /api/v2/appoint/appointments/cancel/:
+    post:
+      operationId: v2_appoint_appointments_cancel_create
+      description: Cancel an appointment or long-term appointment
       tags:
-      - 通知
+        - 预约
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+              $ref: '#/components/schemas/CancelAppoint'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+              $ref: '#/components/schemas/CancelAppoint'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedNotificationStatusUpdate'
+              $ref: '#/components/schemas/CancelAppoint'
+        required: true
+      security:
+        - WxJWT Authentication: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Notification'
-          description: Notification updated successfully
+                type: object
+                properties:
+                  message:
+                    type: string
+                  room_name:
+                    type: string
+          description: Appointment canceled successfully
         '400':
-          description: Invalid status
-        '404':
-          description: Notification not found
+          description: Invalid request or appointment not found
         '403':
           description: Permission denied
-  /api/v2/notification/delete-all-read/:
+  /api/v2/appoint/appointments/renew-longterm/:
     post:
-      operationId: v2_notification_delete_all_read_create
-      description: Delete all read notifications
+      operationId: v2_appoint_appointments_renew_longterm_create
+      description: Renew a long-term appointment
       tags:
-      - 通知
-      responses:
-        '200':
-          description: All read notifications deleted
-  /api/v2/notification/mark-all-read/:
-    post:
-      operationId: v2_notification_mark_all_read_create
-      description: Mark all unread notifications as read
-      tags:
-      - 通知
-      responses:
-        '200':
-          description: All notifications marked as read
-  /api/v2/notification/statistics/:
-    get:
-      operationId: v2_notification_statistics_retrieve
-      description: Get notification statistics for the current user
-      tags:
-      - 通知
+        - 预约
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenewLongtermAppoint'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RenewLongtermAppoint'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RenewLongtermAppoint'
+        required: true
+      security:
+        - WxJWT Authentication: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationStatistics'
+                type: object
+                properties:
+                  message:
+                    type: string
+                  room_name:
+                    type: string
+          description: Long-term appointment renewed successfully
+        '400':
+          description: Invalid request or renewal failed
+        '403':
+          description: Permission denied
+  /api/v2/appoint/arrange-talk-room/:
+    get:
+      operationId: v2_appoint_arrange_talk_room_retrieve
+      description: 返回指定日期的讨论室或俄文楼房间安排信息
+      summary: 获取讨论室安排
+      parameters:
+        - in: query
+          name: day
+          schema:
+            type: integer
+          description: Day
+          required: true
+        - in: query
+          name: month
+          schema:
+            type: integer
+          description: Month
+          required: true
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - russ
+              - talk
+          description: 'Room type: "talk" for talk rooms, "russ" for Russian building
+            rooms'
+          required: true
+        - in: query
+          name: year
+          schema:
+            type: integer
+          description: Year
+          required: true
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrangeTalkRoomResponse'
           description: ''
- 
+        '400':
+          description: Invalid date or parameters
+        '403':
+          description: 未登录或无权限
+  /api/v2/appoint/arrange-time/:
+    get:
+      operationId: v2_appoint_arrange_time_retrieve
+      description: 返回指定房间的预约时间安排信息
+      summary: 获取预约时间安排
+      parameters:
+        - in: query
+          name: Rid
+          schema:
+            type: string
+          description: Room ID
+          required: true
+        - in: query
+          name: start_week
+          schema:
+            type: integer
+            enum:
+              - 0
+              - 1
+          description: Start week (0 for this week, 1 for next week)
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrangeTimeResponse'
+          description: ''
+        '400':
+          description: Invalid room ID or parameters
+        '403':
+          description: 未登录或无权限
+  /api/v2/appoint/checkout/:
+    get:
+      operationId: v2_appoint_checkout_retrieve
+      description: 返回预约表单所需的数据，包括可搜索的用户列表等
+      summary: 获取预约表单数据
+      parameters:
+        - in: query
+          name: Rid
+          schema:
+            type: string
+          description: Room ID
+          required: true
+        - in: query
+          name: endid
+          schema:
+            type: integer
+          description: End time slot ID
+        - in: query
+          name: longterm
+          schema:
+            type: boolean
+          description: Whether this is a long-term appointment
+        - in: query
+          name: start_week
+          schema:
+            type: integer
+            enum:
+              - 0
+              - 1
+          description: Start week (0 for this week, 1 for next week)
+        - in: query
+          name: startid
+          schema:
+            type: integer
+          description: Start time slot ID
+        - in: query
+          name: weekday
+          schema:
+            type: string
+            enum:
+              - Fri
+              - Mon
+              - Sat
+              - Sun
+              - Thu
+              - Tue
+              - Wed
+          description: Weekday
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    type: object
+                    properties:
+                      Rid:
+                        type: string
+                      Rtitle:
+                        type: string
+                      Rmin:
+                        type: integer
+                      Rmax:
+                        type: integer
+                      Rstart:
+                        type: string
+                        format: time
+                      Rfinish:
+                        type: string
+                        format: time
+                      Rpresent:
+                        type: integer
+                      Rstatus:
+                        type: integer
+                      status_display:
+                        type: string
+                      RIsAllNight:
+                        type: boolean
+                      RneedAgree:
+                        type: boolean
+                  appoint_params:
+                    type: object
+                  has_longterm_permission:
+                    type: boolean
+                  has_interview_permission:
+                    type: boolean
+                  interview_max_count:
+                    type: integer
+                  user_infos:
+                    type: array
+                  member_ids:
+                    type: array
+          description: Form data for appointment checkout
+        '400':
+          description: Invalid parameters
+        '403':
+          description: 未登录或无权限
+    post:
+      operationId: v2_appoint_checkout_create
+      description: 提交预约表单，创建预约或长期预约申请
+      summary: 提交预约
+      tags:
+        - 预约
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutAppointRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CheckoutAppointRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckoutAppointRequest'
+        required: true
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutAppointResponse'
+          description: ''
+        '400':
+          description: Invalid request or validation failed
+        '403':
+          description: 未登录或无权限
+  /api/v2/appoint/my-appointments/:
+    get:
+      operationId: v2_appoint_my_appointments_retrieve
+      description: 返回当前用户的预约信息，包括未来预约、过去预约和长期预约
+      summary: 获取用户预约信息
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+          description: ''
+        '403':
+          description: 未登录或无权限
+  /api/v2/appoint/my-violations/:
+    get:
+      operationId: v2_appoint_my_violations_retrieve
+      description: 返回当前用户的违约记录
+      summary: 获取违约记录
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditResponse'
+          description: ''
+        '403':
+          description: 未登录或无权限
+  /api/v2/appoint/status/:
+    get:
+      operationId: v2_appoint_status_retrieve
+      description: 返回主页信息，包括房间状态、公告等
+      summary: 获取主页信息
+      tags:
+        - 预约
+      security:
+        - WxJWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexResponse'
+          description: ''
+        '403':
+          description: 未登录或无权限
 components:
   schemas:
-    
+    AccountResponse:
+      type: object
+      description: Serializer for account endpoint response.
+      properties:
+        user_info:
+          $ref: '#/components/schemas/UserInfo'
+        img_path:
+          type: string
+        has_longterm_permission:
+          type: boolean
+        appoint_list_future:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointDisplay'
+        appoint_list_past:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointDisplay'
+        appoint_list_longterm:
+          type: array
+          items:
+            $ref: '#/components/schemas/LongtermAppointDisplay'
+        longterm_count:
+          type: integer
+        is_full:
+          type: boolean
+        show_admin:
+          type: boolean
+      required:
+        - appoint_list_future
+        - appoint_list_past
+        - has_longterm_permission
+        - img_path
+        - show_admin
+        - user_info
+    Agreement:
+      type: object
+      properties:
+        user:
+          type: string
+          readOnly: true
+        sign_time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 签订时间
+      required:
+        - sign_time
+        - user
+    AgreementResponse:
+      type: object
+      description: Serializer for agreement endpoint response.
+      properties:
+        agree_time:
+          type: string
+          format: date
+          nullable: true
+    AgreementSerializerFixme:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+      required:
+        - id
+    AnswerSheet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 填写时间
+        status:
+          allOf:
+            - $ref: '#/components/schemas/AnswerSheetStatusEnum'
+          title: 状态
+          minimum: -32768
+          maximum: 32767
+        survey:
+          type: integer
+          title: 对应问卷
+      required:
+        - create_time
+        - id
+        - survey
+    AnswerSheetStatusEnum:
+      enum:
+        - 0
+        - 1
+      type: integer
+      description: |-
+        * `0` - 存为草稿
+        * `1` - 提交
+    AnswerText:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        body:
+          type: string
+          title: 内容
+        question:
+          type: integer
+          title: 问题
+        answersheet:
+          type: integer
+          title: 所属答卷
+      required:
+        - answersheet
+        - body
+        - id
+        - question
+    AppointDisplay:
+      type: object
+      description: |-
+        Serializer for appointment display information.
+
+        This matches the structure returned by appointment2Display which uses toJson()
+        and adds additional fields like Astart_hour_minute, is_appointer, etc.
+      properties:
+        Aid:
+          type: integer
+        Rid:
+          type: string
+          nullable: true
+        Rtitle:
+          type: string
+          nullable: true
+        Astart:
+          type: string
+        Afinish:
+          type: string
+        Astart_hour_minute:
+          type: string
+        Afinish_hour_minute:
+          type: string
+        Ausage:
+          type: string
+          nullable: true
+        major_student:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        is_appointer:
+          type: boolean
+        can_cancel:
+          type: boolean
+        Aweek:
+          type: string
+        Atype:
+          type: string
+        Astatus:
+          type: string
+        Atime:
+          type: string
+        Aannouncement:
+          type: string
+          nullable: true
+        Areason:
+          type: integer
+        yp_num:
+          type: integer
+        non_yp_num:
+          type: integer
+        students:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+        - Afinish
+        - Afinish_hour_minute
+        - Aid
+        - Astart
+        - Astart_hour_minute
+    ArrangeTalkRoomResponse:
+      type: object
+      description: Serializer for arrange_talk_room endpoint response.
+      properties:
+        rooms_time_list:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/RoomTimeSlot'
+        weekday:
+          type: string
+        is_today:
+          type: boolean
+        show_min:
+          type: integer
+        width:
+          type: number
+          format: double
+      required:
+        - is_today
+        - rooms_time_list
+        - weekday
+        - width
+    ArrangeTimeResponse:
+      type: object
+      description: Serializer for arrange_time endpoint response.
+      properties:
+        room:
+          $ref: '#/components/schemas/Room'
+        has_longterm_permission:
+          type: boolean
+        allow_overlap:
+          type: boolean
+        max_appoint_time:
+          type: integer
+        is_person:
+          type: boolean
+        is_longterm:
+          type: boolean
+        start_week:
+          type: integer
+        dayrange_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayRange'
+        available_hours:
+          type: object
+          additionalProperties:
+            type: integer
+        function_room_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        talk_room_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+      required:
+        - allow_overlap
+        - available_hours
+        - dayrange_list
+        - function_room_list
+        - has_longterm_permission
+        - is_longterm
+        - is_person
+        - max_appoint_time
+        - room
+        - start_week
+        - talk_room_list
+    CancelAppoint:
+      type: object
+      description: Serializer for canceling an appointment.
+      properties:
+        type:
+          allOf:
+            - $ref: '#/components/schemas/CancelAppointTypeEnum'
+          description: |-
+            Type of appointment to cancel: 'appoint' for regular appointment, 'longterm' for long-term appointment
+
+            * `appoint` - appoint
+            * `longterm` - longterm
+        cancel_id:
+          type: integer
+          description: ID of the appointment or long-term appointment to cancel
+      required:
+        - cancel_id
+        - type
+    CancelAppointTypeEnum:
+      enum:
+        - appoint
+        - longterm
+      type: string
+      description: |-
+        * `appoint` - appoint
+        * `longterm` - longterm
+    CheckoutAppointRequest:
+      type: object
+      description: Serializer for checkout appointment request.
+      properties:
+        Rid:
+          type: string
+          description: Room ID
+        weekday:
+          allOf:
+            - $ref: '#/components/schemas/WeekdayEnum'
+          description: |-
+            Weekday for the appointment
+
+            * `Mon` - Mon
+            * `Tue` - Tue
+            * `Wed` - Wed
+            * `Thu` - Thu
+            * `Fri` - Fri
+            * `Sat` - Sat
+            * `Sun` - Sun
+        startid:
+          type: integer
+          minimum: 0
+          description: Start time slot ID
+        endid:
+          type: integer
+          minimum: 0
+          description: End time slot ID
+        longterm:
+          type: boolean
+          default: false
+          description: Whether this is a long-term appointment
+        start_week:
+          type: integer
+          maximum: 1
+          minimum: 0
+          default: 0
+          description: Start week (0 for this week, 1 for next week)
+        times:
+          type: integer
+          minimum: 1
+          description: Number of weeks for long-term appointment
+        interval:
+          type: integer
+          minimum: 1
+          description: Interval weeks for long-term appointment (1 for weekly, 2 for
+            bi-weekly)
+        interview:
+          type: boolean
+          default: false
+          description: Whether this is an interview appointment
+        Ausage:
+          type: string
+          description: Usage description for the appointment
+          maxLength: 256
+        announcement:
+          type: string
+          default: ''
+          description: Announcement for the appointment
+          maxLength: 256
+        non_yp_num:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Number of non-YP participants
+        students:
+          type: array
+          items:
+            type: string
+          description: List of student IDs participating in the appointment
+      required:
+        - Ausage
+        - Rid
+        - endid
+        - startid
+        - weekday
+    CheckoutAppointResponse:
+      type: object
+      description: Serializer for checkout appointment response.
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        appoint_id:
+          type: integer
+          nullable: true
+        longterm_id:
+          type: integer
+          nullable: true
+        room_name:
+          type: string
+          nullable: true
+      required:
+        - message
+        - success
+    Choice:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 序号
+        text:
+          type: string
+          title: 内容
+        question:
+          type: integer
+          title: 问题
+      required:
+        - id
+        - order
+        - question
+        - text
+    CollegeAnnouncement:
+      type: object
+      description: Serializer for college announcement.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        announcement:
+          type: string
+          readOnly: true
+          title: 通知内容
+        show:
+          allOf:
+            - $ref: '#/components/schemas/ShowEnum'
+          readOnly: true
+          title: 是否显示
+      required:
+        - announcement
+        - id
+        - show
+    CreditResponse:
+      type: object
+      description: Serializer for credit endpoint response.
+      properties:
+        user_info:
+          $ref: '#/components/schemas/UserInfo'
+        img_path:
+          type: string
+        vio_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/ViolationAppoint'
+        show_admin:
+          type: boolean
+      required:
+        - img_path
+        - show_admin
+        - user_info
+        - vio_list
+    DayRange:
+      type: object
+      description: Serializer for day range in arrange_time.
+      properties:
+        weekday:
+          type: string
+        date:
+          type: string
+        year:
+          type: integer
+        month:
+          type: integer
+        day:
+          type: integer
+        timesection:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSection'
+      required:
+        - date
+        - day
+        - month
+        - timesection
+        - weekday
+        - year
+    Dormitory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          title: 宿舍号
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 容量
+        gender:
+          allOf:
+            - $ref: '#/components/schemas/GenderEnum'
+          title: 性别
+      required:
+        - gender
+        - id
+    DormitoryAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        bed_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 床位号
+        time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 创建时间
+        active:
+          type: boolean
+          title: 是否有效
+        dormitory:
+          type: integer
+          title: 宿舍号
+        user:
+          type: integer
+          title: 成员
+      required:
+        - bed_id
+        - dormitory
+        - id
+        - time
+        - user
+    GenderEnum:
+      enum:
+        - M
+        - F
+      type: string
+      description: |-
+        * `M` - 男
+        * `F` - 女
+    IndexResponse:
+      type: object
+      description: Serializer for index endpoint response.
+      properties:
+        function_room_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        statistics_info:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomStatistics'
+        talk_room_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        room_info:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomInfo'
+        russian_room_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        russ_len:
+          type: integer
+        announcements:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollegeAnnouncement'
+        show_admin:
+          type: boolean
+      required:
+        - function_room_list
+        - room_info
+        - russ_len
+        - russian_room_list
+        - show_admin
+        - statistics_info
+        - talk_room_list
+    LongtermAppointDisplay:
+      type: object
+      description: Serializer for long-term appointment display information.
+      properties:
+        longterm_id:
+          type: integer
+        appoint:
+          $ref: '#/components/schemas/AppointDisplay'
+        times:
+          type: integer
+        interval:
+          type: integer
+        status:
+          type: string
+        renewable:
+          type: boolean
+        review_comment:
+          type: string
+      required:
+        - appoint
+        - interval
+        - longterm_id
+        - renewable
+        - status
+        - times
     Notification:
       type: object
       description: Serializer for notification with all fields.
@@ -183,7 +1005,7 @@ components:
           description: Sender's name
         status:
           allOf:
-          - $ref: '#/components/schemas/Status881Enum'
+            - $ref: '#/components/schemas/Status881Enum'
           minimum: -32768
           maximum: 32767
         status_display:
@@ -215,7 +1037,7 @@ components:
           title: 通知处理时间
         typename:
           allOf:
-          - $ref: '#/components/schemas/TypenameEnum'
+            - $ref: '#/components/schemas/TypenameEnum'
           minimum: -32768
           maximum: 32767
         typename_display:
@@ -232,14 +1054,14 @@ components:
           type: boolean
           title: 是否匿名
       required:
-      - finish_time
-      - id
-      - sender
-      - sender_name
-      - start_time
-      - status_display
-      - title_display
-      - typename_display
+        - finish_time
+        - id
+        - sender
+        - sender_name
+        - start_time
+        - status_display
+        - title_display
+        - typename_display
     NotificationStatistics:
       type: object
       description: Serializer for notification statistics.
@@ -260,11 +1082,11 @@ components:
           type: integer
           description: Number of need_do type notifications
       required:
-      - need_do
-      - need_read
-      - read
-      - total
-      - unread
+        - need_do
+        - need_read
+        - read
+        - total
+        - unread
     PatchedAnswerSheet:
       type: object
       properties:
@@ -278,11 +1100,520 @@ components:
           title: 填写时间
         status:
           allOf:
-          - $ref: '#/components/schemas/AnswerSheetStatusEnum'
+            - $ref: '#/components/schemas/AnswerSheetStatusEnum'
           title: 状态
           minimum: -32768
           maximum: 32767
         survey:
           type: integer
           title: 对应问卷
-    
+    PatchedAnswerText:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        body:
+          type: string
+          title: 内容
+        question:
+          type: integer
+          title: 问题
+        answersheet:
+          type: integer
+          title: 所属答卷
+    PatchedChoice:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 序号
+        text:
+          type: string
+          title: 内容
+        question:
+          type: integer
+          title: 问题
+    PatchedNotificationStatusUpdate:
+      type: object
+      description: Serializer for updating notification status.
+      properties:
+        status:
+          allOf:
+            - $ref: '#/components/schemas/Status881Enum'
+          description: |-
+            New status for the notification
+
+            * `0` - 已处理
+            * `1` - 待处理
+            * `2` - 已删除
+    PatchedQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 序号
+        topic:
+          type: string
+          title: 简介
+          maxLength: 50
+        description:
+          type: string
+          title: 题目描述
+        type:
+          allOf:
+            - $ref: '#/components/schemas/QuestionTypeEnum'
+          title: 类型
+        required:
+          type: boolean
+          title: 必填
+        survey:
+          type: integer
+          title: 所属问卷
+    PatchedSurvey:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          title: 标题
+          maxLength: 50
+        description:
+          type: string
+          title: 描述
+        status:
+          allOf:
+            - $ref: '#/components/schemas/SurveyStatusEnum'
+          title: 状态
+          minimum: -32768
+          maximum: 32767
+        start_time:
+          type: string
+          format: date-time
+          title: 起始时间
+        end_time:
+          type: string
+          format: date-time
+          title: 截止时间
+        time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 创建时间
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: 序号
+        topic:
+          type: string
+          title: 简介
+          maxLength: 50
+        description:
+          type: string
+          title: 题目描述
+        type:
+          allOf:
+            - $ref: '#/components/schemas/QuestionTypeEnum'
+          title: 类型
+        required:
+          type: boolean
+          title: 必填
+        survey:
+          type: integer
+          title: 所属问卷
+      required:
+        - id
+        - order
+        - survey
+        - topic
+    QuestionTypeEnum:
+      enum:
+        - TEXT
+        - SINGLE
+        - MULTIPLE
+        - RANKING
+      type: string
+      description: |-
+        * `TEXT` - 填空题
+        * `SINGLE` - 单选题
+        * `MULTIPLE` - 多选题
+        * `RANKING` - 排序题
+    RenewLongtermAppoint:
+      type: object
+      description: Serializer for renewing a long-term appointment.
+      properties:
+        longterm_id:
+          type: integer
+          description: ID of the long-term appointment to renew
+        times:
+          type: integer
+          minimum: 1
+          description: Number of weeks to renew
+      required:
+        - longterm_id
+        - times
+    Room:
+      type: object
+      description: Serializer for Room model.
+      properties:
+        Rid:
+          type: string
+          readOnly: true
+          title: 房间编号
+        Rtitle:
+          type: string
+          readOnly: true
+          title: 房间名称
+        Rmin:
+          type: integer
+          readOnly: true
+          title: 房间预约人数下限
+        Rmax:
+          type: integer
+          readOnly: true
+          title: 房间使用人数上限
+        Rstart:
+          type: string
+          format: time
+          readOnly: true
+          title: 最早预约时间
+        Rfinish:
+          type: string
+          format: time
+          readOnly: true
+          title: 最迟预约时间
+        Rpresent:
+          type: integer
+          readOnly: true
+          title: 目前人数
+        Rstatus:
+          allOf:
+            - $ref: '#/components/schemas/RstatusEnum'
+          readOnly: true
+          title: 房间状态
+        status_display:
+          type: string
+          readOnly: true
+          description: Room status display text
+        RIsAllNight:
+          type: boolean
+          readOnly: true
+          title: 可通宵使用
+        RneedAgree:
+          type: boolean
+          readOnly: true
+          title: 需要许可
+      required:
+        - RIsAllNight
+        - Rfinish
+        - Rid
+        - Rmax
+        - Rmin
+        - RneedAgree
+        - Rpresent
+        - Rstart
+        - Rstatus
+        - Rtitle
+        - status_display
+    RoomInfo:
+      type: object
+      description: Serializer for room information with occupancy status.
+      properties:
+        room:
+          $ref: '#/components/schemas/Room'
+        is_occupied:
+          type: boolean
+        next_available_time:
+          type: string
+          nullable: true
+      required:
+        - is_occupied
+        - room
+    RoomStatistics:
+      type: object
+      description: Serializer for room statistics.
+      properties:
+        room:
+          $ref: '#/components/schemas/Room'
+        occupancy_percentage:
+          type: integer
+      required:
+        - occupancy_percentage
+        - room
+    RoomTimeSlot:
+      type: object
+      description: Serializer for room time slot in arrange_talk_room.
+      properties:
+        status:
+          type: integer
+        time_id:
+          type: integer
+        Rid:
+          type: string
+        starttime:
+          type: string
+        display_info:
+          type: string
+          nullable: true
+      required:
+        - Rid
+        - starttime
+        - status
+        - time_id
+    RstatusEnum:
+      enum:
+        - 0
+        - 1
+        - 2
+      type: integer
+      description: |-
+        * `0` - 允许预约
+        * `1` - 无需预约
+        * `2` - 禁止使用
+    ShowEnum:
+      enum:
+        - 1
+        - 0
+      type: integer
+      description: |-
+        * `1` - Yes
+        * `0` - No
+    Status881Enum:
+      enum:
+        - 0
+        - 1
+        - 2
+      type: integer
+      description: |-
+        * `0` - 已处理
+        * `1` - 待处理
+        * `2` - 已删除
+    Survey:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          title: 标题
+          maxLength: 50
+        description:
+          type: string
+          title: 描述
+        status:
+          allOf:
+            - $ref: '#/components/schemas/SurveyStatusEnum'
+          title: 状态
+          minimum: -32768
+          maximum: 32767
+        start_time:
+          type: string
+          format: date-time
+          title: 起始时间
+        end_time:
+          type: string
+          format: date-time
+          title: 截止时间
+        time:
+          type: string
+          format: date-time
+          readOnly: true
+          title: 创建时间
+      required:
+        - end_time
+        - id
+        - start_time
+        - time
+        - title
+    SurveyStatusEnum:
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+      type: integer
+      description: |-
+        * `0` - 审核中
+        * `1` - 发布中
+        * `2` - 已结束
+        * `3` - 草稿
+    TimeSection:
+      type: object
+      description: Serializer for time section in arrange_time.
+      properties:
+        starttime:
+          type: string
+        status:
+          type: integer
+        id:
+          type: integer
+        display_info:
+          type: string
+          nullable: true
+      required:
+        - id
+        - starttime
+        - status
+    TypenameEnum:
+      enum:
+        - 0
+        - 1
+      type: integer
+      description: |-
+        * `0` - 知晓类
+        * `1` - 处理类
+    UserInfo:
+      type: object
+      description: Serializer for user information.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        credit:
+          type: integer
+        agree_time:
+          type: string
+          format: date
+          nullable: true
+      required:
+        - credit
+        - id
+        - name
+    ViolationAppoint:
+      type: object
+      description: Serializer for violation appointment display.
+      properties:
+        Aid:
+          type: integer
+        Room:
+          type: string
+          nullable: true
+        Rtitle:
+          type: string
+          nullable: true
+        Rid:
+          type: string
+          nullable: true
+        Astart:
+          type: string
+        Afinish:
+          type: string
+        Astart_hour_minute:
+          type: string
+        Afinish_hour_minute:
+          type: string
+        Ausage:
+          type: string
+          nullable: true
+        major_student:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        Atype:
+          type: string
+        Astatus:
+          type: string
+        Atime:
+          type: string
+        Aannouncement:
+          type: string
+          nullable: true
+        Areason:
+          type: integer
+        yp_num:
+          type: integer
+        non_yp_num:
+          type: integer
+        students:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+        - Afinish
+        - Afinish_hour_minute
+        - Aid
+        - Astart
+        - Astart_hour_minute
+    WeekdayEnum:
+      enum:
+        - Mon
+        - Tue
+        - Wed
+        - Thu
+        - Fri
+        - Sat
+        - Sun
+      type: string
+      description: |-
+        * `Mon` - Mon
+        * `Tue` - Tue
+        * `Wed` - Wed
+        * `Thu` - Thu
+        * `Fri` - Fri
+        * `Sat` - Sat
+        * `Sun` - Sun
+    WxBind:
+      type: object
+      description: Validate credentials and the signed openid returned by the code
+        login step.
+      properties:
+        username:
+          type: string
+          description: Django username
+          maxLength: 150
+        password:
+          type: string
+          description: Account password
+          maxLength: 128
+        signed_openid:
+          type: string
+          description: Signed openid issued by backend
+      required:
+        - password
+        - signed_openid
+        - username
+    WxCode:
+      type: object
+      description: Validate the code returned by ``wx.login``.
+      properties:
+        code:
+          type: string
+          description: wx.login temporary code
+          maxLength: 128
+      required:
+        - code
+  securitySchemes:
+    WxJWT Authentication:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
