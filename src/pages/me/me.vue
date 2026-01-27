@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import { on } from 'node:events'
-import { title } from 'node:process'
 import { storeToRefs } from 'pinia'
 import {
   getNotificationStatistics,
 } from '@/api/notification'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 import { LOGIN_PAGE } from '@/router/config'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
@@ -96,18 +95,20 @@ async function loadStatistics() {
   }
 }
 
-onMounted(() => {
-  if (tokenStore.hasLogin) {
-    loadStatistics()
-  }
-})
-
-// FIXME: back回来的时候应该更新
-onShow(() => {
-  if (tokenStore.hasLogin) {
-    loadStatistics()
-  }
-})
+// 页面自动刷新：从其他页面返回时自动更新数据，还挺巧妙哈
+// 用页面栈长度判断的捏
+usePageRefresh(
+  async () => {
+    // 加载未读信息数
+    await loadStatistics()
+    // 更新用户信息，如头像等
+    await userStore.fetchUserInfo()
+  },
+  {
+    shouldRefresh: () => tokenStore.hasLogin,
+    minInterval: 2000,
+  },
+)
 
 // 菜单项
 const menuItems = [
@@ -116,6 +117,7 @@ const menuItems = [
   // { title: '设置', icon: 'i-carbon-settings', onClick: handleNothing },
   // { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
   // { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
+  { title: '切换账户', icon: 'i-carbon-collaborate', onClick: () => uni.navigateTo({ url: '/pages/me/my-accounts' }) },
   { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
 ]
 

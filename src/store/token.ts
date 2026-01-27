@@ -104,13 +104,16 @@ export const useTokenStore = defineStore(
      * @param tokenInfo 登录返回的token信息
      */
     async function _postLogin(tokenInfo: IWxLoginRes) {
+      // 保存token
       const tokenData = {
         token: tokenInfo.token!,
         expiresIn: tokenInfo.expires_in,
       }
       setTokenInfo(tokenData)
+      // 设置用户名，以供后续请求使用
       const userStore = useUserStore()
-      await userStore.fetchUserInfo()
+      userStore.userInfo.username = tokenInfo.username!
+      userStore.userInfo.name = tokenInfo.name!
     }
 
     /**
@@ -150,15 +153,21 @@ export const useTokenStore = defineStore(
      * （各有利弊，看业务场景和系统复杂度），这里使用2个接口返回的来模拟
      * @returns 登录结果
      */
-    const wxLogin = async () => {
+    const wxLogin = async (username?: string) => {
       try {
         // 获取微信小程序登录的code
         // 首先从微信API获取code
         const resWxCode = await getWxCode()
         const code = resWxCode.code
         console.log('微信登录-code: ', code)
-        // 然后从后端换取jwt token
-        const res = await _wxLogin(code)
+        // 然后从后端换取jwt token，如果指定了username，则是切换到子用户
+        // 如果没有，则就是续期，或者首次登陆
+        if (!username) {
+          const userStore = useUserStore()
+          username = userStore.userInfo.username
+        }
+        console.log('微信登录-username: ', username)
+        const res = await _wxLogin(code, username)
         if (res.status === 'unbound') {
           // 未绑定账号，跳转到绑定页面
           uni.navigateTo({
@@ -167,7 +176,7 @@ export const useTokenStore = defineStore(
           return
         }
         console.log('微信登录-token: ', res)
-        // 如果成功，储存token
+        // 如果成功，储存token和用户名
         await _postLogin(res)
         console.log('成功登录，token已刷新')
         return res

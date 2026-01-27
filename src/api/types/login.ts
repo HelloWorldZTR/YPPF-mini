@@ -136,3 +136,14 @@ export function isDoubleTokenRes(tokenRes: IAuthLoginRes): tokenRes is IDoubleTo
 export interface IEverydaySignInRes {
   message: string
 }
+
+export interface IMyAccountsRes {
+  account_id: string
+  accounts: IAccount[]
+}
+
+export interface IAccount {
+  username: string
+  name: string
+  type: 'person' | 'org'
+}

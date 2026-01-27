@@ -1,4 +1,4 @@
-import type { IAuthLoginRes, ICaptcha, IDoubleTokenRes, IEverydaySignInRes, IUserInfoRes, IWxBindRes, IWxLoginRes } from './types/login'
+import type { IAuthLoginRes, ICaptcha, IDoubleTokenRes, IEverydaySignInRes, IMyAccountsRes, IUserInfoRes, IWxBindRes, IWxLoginRes } from './types/login'
 import { http } from '@/http/http'
 
 /**
@@ -36,10 +36,16 @@ export function login(loginForm: ILoginForm) {
 /**
  * 微信小程序登录
  * @param code 微信登录凭证
+ * @param username 用户名，如果没有则登录主用户
  * 返回一个jwt token
  */
-export function wxLogin(code: string) {
-  return http.post<IWxLoginRes>('/api/v2/auth/wx/login/', { code })
+export function wxLogin(code: string, username?: string) {
+  if (username) {
+    return http.post<IWxLoginRes>('/api/v2/auth/wx/login/', { code, username })
+  }
+  else {
+    return http.post<IWxLoginRes>('/api/v2/auth/wx/login/', { code })
+  }
 }
 
 /**
@@ -83,4 +89,8 @@ export function getWxCode() {
 
 export function everydaySignIn() {
   return http.post<IEverydaySignInRes>('/api/v2/user/daily-login/')
+}
+
+export function getMyAccounts() {
+  return http.get<IMyAccountsRes>('/api/v2/auth/my-accounts/')
 }

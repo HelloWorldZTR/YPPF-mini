@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import type { IIndexResponse, IRoom } from '@/api/types/appoint'
 import { getIndexStatus } from '@/api/appoint'
-import { getGlobalError, removeGlobalError } from '@/utils/globalError'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
+import { getGlobalError } from '@/utils/globalError'
 
 definePage({
   style: {
@@ -18,6 +19,15 @@ const activeTab = ref(0)
 const errorMsg = getGlobalError()
 const toastErrorRef = ref()
 
+// 公告列表
+const announcements = computed(() => {
+  if (!statusData.value?.announcements?.length)
+    return []
+  return statusData.value.announcements
+    .filter(item => item.show === 1)
+    .map(item => item.announcement)
+})
+
 // 计算头部高度（导航栏 + 状态栏 + 公告栏），单位：rpx
 const headerHeight = computed(() => {
   const systemInfo = uni.getSystemInfoSync()
@@ -26,19 +36,10 @@ const headerHeight = computed(() => {
   const statusBarHeightRpx = (systemInfo.statusBarHeight / systemInfo.windowWidth) * 750
   const navbarHeightRpx = 88 + Math.ceil(statusBarHeightRpx)
   // 公告栏高度：每个公告约 40rpx，加上 padding 24rpx (上下各12rpx)
-  const announcementHeightRpx = announcements.value.length > 0 
+  const announcementHeightRpx = announcements.value.length > 0
     ? announcements.value.length * 40 + 24
     : 0
   return navbarHeightRpx + announcementHeightRpx
-})
-
-// 公告列表
-const announcements = computed(() => {
-  if (!statusData.value?.announcements?.length)
-    return []
-  return statusData.value.announcements
-    .filter(item => item.show === 1)
-    .map(item => item.announcement)
 })
 
 // 侧边栏列表
@@ -117,10 +118,15 @@ async function fetchData() {
   }
 }
 
-onShow(() => {
-  // 切换页面的时候刷新一下数据，因为可能会有新的公告
-  fetchData()
-})
+// 页面自动刷新：从其他页面返回时自动更新数据
+usePageRefresh(
+  async () => {
+    await fetchData()
+  },
+  {
+    minInterval: 2000,
+  },
+)
 
 function goToArrangeByTime() {
   uni.navigateTo({
