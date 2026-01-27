@@ -29,6 +29,15 @@ const appGroups = [
 ]
 
 function handleAppClick(app: any) {
+  // 图书馆直接跳转
+  if (app.name === '图书馆') {
+    uni.navigateTo({
+      url: '/pages/appmenu/library',
+    })
+    return
+  }
+
+  // 其他应用显示开发中
   uni.showToast({
     title: `${app.name} 开发中...`,
     icon: 'none',
