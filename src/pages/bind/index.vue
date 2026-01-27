@@ -67,7 +67,7 @@ async function handleBind() {
   }
   catch (err) {
     console.error(err)
-    uni.showToast({ title: '绑定失败', icon: 'none' })
+    uni.showToast({ title: '绑定失败', icon: 'error' })
   }
 }
 </script>

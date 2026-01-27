@@ -1,4 +1,4 @@
-import type { IAuthLoginRes, ICaptcha, IDoubleTokenRes, IUserInfoRes, IWxBindRes, IWxLoginRes } from './types/login'
+import type { IAuthLoginRes, ICaptcha, IDoubleTokenRes, IEverydaySignInRes, IUserInfoRes, IWxBindRes, IWxLoginRes } from './types/login'
 import { http } from '@/http/http'
 
 /**
@@ -79,4 +79,8 @@ export function getWxCode() {
       fail: err => reject(new Error(err)),
     })
   })
+}
+
+export function everydaySignIn() {
+  return http.post<IEverydaySignInRes>('/api/v2/user/daily-login/')
 }
