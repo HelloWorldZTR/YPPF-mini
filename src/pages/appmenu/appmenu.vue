@@ -22,6 +22,7 @@ const appGroups = [
     apps: [
       { name: '成绩查询', icon: 'i-carbon-education', color: 'text-indigo-500' },
       { name: '图书馆', icon: 'i-carbon-book', color: 'text-red-500' },
+      { name: '元气商城', icon: 'i-carbon-shopping-cart', color: 'text-pink-500' },
       { name: '活动报名', icon: 'i-carbon-event', color: 'text-teal-500' },
       { name: '校园公告', icon: 'i-carbon-bullhorn', color: 'text-yellow-600' },
     ],
@@ -33,6 +34,14 @@ function handleAppClick(app: any) {
   if (app.name === '图书馆') {
     uni.navigateTo({
       url: '/pages/appmenu/library',
+    })
+    return
+  }
+
+  // 元气商城直接跳转
+  if (app.name === '元气商城') {
+    uni.navigateTo({
+      url: '/pages/appmenu/YQpools',
     })
     return
   }
