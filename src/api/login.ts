@@ -1,4 +1,15 @@
-import type { IAuthLoginRes, ICaptcha, IDoubleTokenRes, IEverydaySignInRes, IMyAccountsRes, IUserInfoRes, IWxBindRes, IWxLoginRes } from './types/login'
+import type {
+  IAuthLoginRes,
+  ICaptcha,
+  ICheckLoginRes,
+  IDoubleTokenRes,
+  IEverydaySignInRes,
+  IMyAccountsRes,
+  ITicketRes,
+  IUserInfoRes,
+  IWxBindRes,
+  IWxLoginRes,
+} from './types/login'
 import { http } from '@/http/http'
 
 /**
@@ -9,6 +20,9 @@ export interface ILoginForm {
   password: string
 }
 
+/**
+ * 微信账号绑定表单
+ */
 export interface IWxBindForm {
   username: string
   password: string
@@ -68,6 +82,7 @@ export function refreshToken(refreshToken: string) {
 
 /**
  * 获取当前登录用户信息
+ * @returns IUserInfoRes 用户信息
  */
 export function getUserMe() {
   return http.get<IUserInfoRes>('/api/v2/user/me/')
@@ -87,10 +102,37 @@ export function getWxCode() {
   })
 }
 
+/**
+ * 每日签到领元气值
+ * @returns IEverydaySignInRes 文案和获得的数量
+ */
 export function everydaySignIn() {
   return http.post<IEverydaySignInRes>('/api/v2/user/daily-login/')
 }
 
+/**
+ * 获取当前可登录的账户列表
+ * @returns IMyAccountsRes 账户列表
+ */
 export function getMyAccounts() {
   return http.get<IMyAccountsRes>('/api/v2/auth/my-accounts/')
+}
+
+/**
+ * 检查当前账号是否登录，token是否还有效
+ * 因为webView这类页面的请求不会被hook，所以需要手动检查并更新token
+ * 如果token无效的话，会401，然后tokenStore会自动更新token
+ * @returns ICheckLoginRes 是否登录，用户名，用户类型
+ * @deprecated
+ */
+export function checkLogin() {
+  return http.get<ICheckLoginRes>('/api/v2/auth/check-login/')
+}
+
+/**
+ * 用JWT token获取ticket
+ * @returns ITicketRes ticket和过期时间
+ */
+export function getTicket() {
+  return http.post<ITicketRes>('/api/v2/auth/ticket/')
 }

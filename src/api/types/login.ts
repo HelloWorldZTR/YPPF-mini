@@ -147,3 +147,15 @@ export interface IAccount {
   name: string
   type: 'person' | 'org'
 }
+
+export interface ICheckLoginRes {
+  is_login: boolean
+  username: string
+  name: string
+  type: 'person' | 'org'
+}
+
+export interface ITicketRes {
+  ticket: string
+  expires_in: number
+}

@@ -118,14 +118,24 @@ const menuItems = [
   // { title: '常见问题', icon: 'i-carbon-help', onClick: handleNothing },
   // { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
   { title: '切换账户', icon: 'i-carbon-collaborate', onClick: () => uni.navigateTo({ url: '/pages/me/my-accounts' }) },
+  { title: '编辑个人资料', icon: 'i-carbon-user-profile', onClick: () => uni.navigateTo({ url: '/pages/generic/webview?uri=/userAccountSetting' }) },
   { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
 ]
 
 function handleProfile() {
-  uni.showToast({
-    title: '个人资料功能开发中，敬请期待~',
-    icon: 'none',
-  })
+  /* TODO: 把这个改成原生的 */
+  if (userInfo.value.is_person) {
+    uni.navigateTo({ url: '/pages/generic/webview?uri=/stuinfo' })
+  }
+  else if (userInfo.value.is_org) {
+    uni.navigateTo({ url: '/pages/generic/webview?uri=/orginfo' })
+  }
+  else {
+    uni.showToast({
+      title: '您没有主页',
+      icon: 'error',
+    })
+  }
 }
 </script>
 
