@@ -11,37 +11,35 @@ const appGroups = [
   {
     name: '实用工具',
     apps: [
-      { name: '问卷调查', icon: 'i-carbon-document-tasks', color: 'text-blue-500' },
-      { name: '反馈建议', icon: 'i-carbon-chat-bot', color: 'text-green-500' },
-      { name: '说的道理', icon: 'i-carbon-education', color: 'text-orange-500' },
-      { name: '课程表', icon: 'i-carbon-calendar', color: 'text-purple-500' },
+      { name: '反馈中心', icon: 'i-carbon-chat-bot', color: 'text-green-500', url: '/pages/generic/webview?uri=/feedback' },
+      { name: '元气值商城', icon: 'i-carbon-store', color: 'text-blue-500', url: '/pages/generic/webview?uri=/showPools' },
+      { name: '住宿调研', icon: 'i-carbon-document-tasks', color: 'text-orange-500', url: '/pages/generic/webview?uri=/dormitory/routine-QA/' },
+      { name: '宿舍分配', icon: 'i-carbon-catalog', color: 'text-purple-500', url: '/pages/generic/webview?uri=/dormitory/assign-result/' },
+      { name: '旧版预约', icon: 'i-carbon-calendar', color: 'text-pink-600', url: '/pages/generic/webview?uri=/underground' },
     ],
   },
   {
-    name: '更多应用',
+    name: '小组生活',
     apps: [
-      { name: '成绩查询', icon: 'i-carbon-education', color: 'text-indigo-500' },
-      { name: '图书馆', icon: 'i-carbon-book', color: 'text-red-500' },
-      { name: '活动报名', icon: 'i-carbon-event', color: 'text-teal-500' },
-      { name: '校园公告', icon: 'i-carbon-bullhorn', color: 'text-yellow-600' },
+      { name: '小组一览', icon: 'i-carbon-event', color: 'text-teal-500', url: '/pages/generic/webview?uri=/subscribeOrganization' },
+      { name: '加入小组', icon: 'i-carbon-bullhorn', color: 'text-yellow-600', url: '/pages/generic/webview?uri=/showPosition' },
+      { name: '新建小组', icon: 'i-carbon-add', color: 'text-pink-600', url: '/pages/generic/webview?uri=/showNewOrganization' },
+    ],
+  },
+  {
+    name: '元培书院',
+    apps: [
+      { name: '元培书房', icon: 'i-carbon-book', color: 'text-red-500', url: '/pages/appmenu/library' },
+      { name: '学术地图', icon: 'i-carbon-map', color: 'text-indigo-500', url: '/pages/generic/webview?uri=/modifyAcademic' },
+      { name: '学术问答', icon: 'i-carbon-question-answering', color: 'text-teal-500', url: '/pages/generic/webview?uri=/AcademicQA' },
+      { name: '书院课程', icon: 'i-carbon-education', color: 'text-yellow-600', url: '/pages/generic/webview?uri=/selectCourse' },
     ],
   },
 ]
 
-function handleAppClick(app: any) {
-  // 图书馆直接跳转
-  if (app.name === '图书馆') {
-    uni.navigateTo({
-      url: '/pages/appmenu/library',
-    })
-    return
-  }
-
-  // 其他应用显示开发中
-  uni.showToast({
-    title: `${app.name} 开发中...`,
-    icon: 'none',
-  })
+function handleAppClick(url: string) {
+  console.log('handleAppClick', url)
+  uni.navigateTo({ url })
 }
 </script>
 
@@ -77,7 +75,7 @@ function handleAppClick(app: any) {
             v-for="(app, aIdx) in group.apps"
             :key="aIdx"
             class="flex flex-col items-center active:opacity-70"
-            @click="handleAppClick(app)"
+            @click="handleAppClick(app.url)"
           >
             <view :class="[app.icon, app.color]" class="mb-2 text-3xl" />
             <text class="text-xs text-[var(--text-main)]">{{ app.name }}</text>
