@@ -12,7 +12,7 @@ const appGroups = [
     name: '实用工具',
     apps: [
       { name: '反馈中心', icon: 'i-carbon-chat-bot', color: 'text-green-500', url: '/pages/generic/webview?uri=/feedback' },
-      { name: '元气值商城', icon: 'i-carbon-store', color: 'text-blue-500', url: '/pages/generic/webview?uri=/showPools' },
+      { name: '元气值商城', icon: 'i-carbon-store', color: 'text-blue-500', url: '/pages/appmenu/YQpools' },
       { name: '住宿调研', icon: 'i-carbon-document-tasks', color: 'text-orange-500', url: '/pages/generic/webview?uri=/dormitory/routine-QA/' },
       { name: '宿舍分配', icon: 'i-carbon-catalog', color: 'text-purple-500', url: '/pages/generic/webview?uri=/dormitory/assign-result/' },
       { name: '旧版预约', icon: 'i-carbon-calendar', color: 'text-pink-600', url: '/pages/generic/webview?uri=/underground' },
