@@ -36,6 +36,13 @@ function handleAppClick(app: any) {
     })
     return
   }
+  // 反馈建议直接跳转
+  if (app.name === '反馈建议') {
+    uni.navigateTo({
+      url: '/pages/appmenu/feedback',
+    })
+    return
+  }
 
   // 其他应用显示开发中
   uni.showToast({

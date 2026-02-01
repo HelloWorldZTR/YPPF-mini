@@ -1,6 +1,5 @@
 import type { IDoubleTokenRes } from '@/api/types/login'
 import type { CustomRequestOptions, IResponse } from '@/http/types'
-import { M } from 'node_modules/vite/dist/node/types.d-aGj9QkWt'
 import { nextTick } from 'vue'
 import { LOGIN_PAGE_LIST } from '@/router/config'
 import { useTokenStore } from '@/store/token'
@@ -21,6 +20,7 @@ const NO_RETRY_PATHS = [
 export function http<T>(options: CustomRequestOptions) {
   // 1. 返回 Promise 对象
   return new Promise<T>((resolve, reject) => {
+    // uni.request 类型未包含 PATCH，运行时支持，故做类型断言
     uni.request({
       ...options,
       dataType: 'json',
@@ -141,7 +141,7 @@ export function http<T>(options: CustomRequestOptions) {
         })
         reject(err)
       },
-    })
+    } as UniApp.RequestOptions)
   })
 }
 

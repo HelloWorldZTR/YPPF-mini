@@ -1,7 +1,11 @@
 /**
  * 在 uniapp 的 RequestOptions 和 IUniUploadFileOptions 基础上，添加自定义参数
  */
-export type CustomRequestOptions = UniApp.RequestOptions & {
+/** 支持的请求方法（UniApp 未声明 PATCH，但运行时支持） */
+export type HttpMethod = UniApp.RequestOptions['method'] | 'PATCH'
+
+export type CustomRequestOptions = Omit<UniApp.RequestOptions, 'method'> & {
+  method?: HttpMethod
   query?: Record<string, any>
   /** 出错时是否隐藏错误提示 */
   hideErrorToast?: boolean
