@@ -17,6 +17,10 @@ function handleForceRelogin() {
     icon: 'success',
   })
 }
+
+function handleNavigateToWebview() {
+  uni.navigateTo({ url: '/pages/generic/webview?uri=/' })
+}
 </script>
 
 <template>
@@ -52,6 +56,12 @@ function handleForceRelogin() {
         @click="handleForceRelogin"
       >
         强制重新登录
+      </button>
+      <button
+        class="rounded bg-green-500 px-4 py-2 text-white"
+        @click="handleNavigateToWebview"
+      >
+        跳转Webview页面
       </button>
     </view>
   </view>
