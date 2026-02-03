@@ -132,3 +132,30 @@ export function isSingleTokenRes(tokenRes: IAuthLoginRes): tokenRes is ISingleTo
 export function isDoubleTokenRes(tokenRes: IAuthLoginRes): tokenRes is IDoubleTokenRes {
   return 'accessToken' in tokenRes && 'refreshToken' in tokenRes
 }
+
+export interface IEverydaySignInRes {
+  message: string
+}
+
+export interface IMyAccountsRes {
+  account_id: string
+  accounts: IAccount[]
+}
+
+export interface IAccount {
+  username: string
+  name: string
+  type: 'person' | 'org'
+}
+
+export interface ICheckLoginRes {
+  is_login: boolean
+  username: string
+  name: string
+  type: 'person' | 'org'
+}
+
+export interface ITicketRes {
+  ticket: string
+  expires_in: number
+}

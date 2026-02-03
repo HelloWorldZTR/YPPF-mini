@@ -3,10 +3,24 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
 import { setGlobalError } from '@/utils/globalError'
+
 const userStore = useUserStore()
 const tokenStore = useTokenStore()
 // 使用storeToRefs解构userInfo
 const { userInfo } = storeToRefs(userStore)
+
+function handleForceRelogin() {
+  const myUsername = userInfo.value.username
+  tokenStore.wxLogin(myUsername)
+  uni.showToast({
+    title: '重新登录成功',
+    icon: 'success',
+  })
+}
+
+function handleNavigateToWebview() {
+  uni.navigateTo({ url: '/pages/generic/webview?uri=/' })
+}
 </script>
 
 <template>
@@ -29,12 +43,25 @@ const { userInfo } = storeToRefs(userStore)
       </button>
       <button
         class="rounded bg-green-500 px-4 py-2 text-white"
-        @click="()=>{
+        @click="() => {
           setGlobalError('test')
-          uni.switchTab({ url: '/pages/appoint/appoint' }
-          )}"
+          uni.switchTab({ url: '/pages/appoint/appoint' },
+          )
+        }"
       >
         跳转预约页面(带错误信息)
+      </button>
+      <button
+        class="rounded bg-green-500 px-4 py-2 text-white"
+        @click="handleForceRelogin"
+      >
+        强制重新登录
+      </button>
+      <button
+        class="rounded bg-green-500 px-4 py-2 text-white"
+        @click="handleNavigateToWebview"
+      >
+        跳转Webview页面
       </button>
     </view>
   </view>

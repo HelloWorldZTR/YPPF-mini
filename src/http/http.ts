@@ -32,8 +32,8 @@ export function http<T>(options: CustomRequestOptions) {
         const responseData = res.data as IResponse<T>
         const { code } = responseData
 
-        // 检查是否是401 Authentication or 403 Forbidden(No bearer token, so wrong request format)
-        const isTokenExpired = res.statusCode === 401 || res.statusCode === 403 || code === 401 || code === 403
+        // 检查是否是401 Authentication Error
+        const isTokenExpired = res.statusCode === 401 || code === 401
         const requestPath = options.url || ''
 
         if (isTokenExpired && !NO_RETRY_PATHS.includes(requestPath)) {

@@ -67,7 +67,12 @@ async function handleBind() {
   }
   catch (err) {
     console.error(err)
-    uni.showToast({ title: '绑定失败', icon: 'none' })
+    // TODO: 采用更合适的方式显示
+    let err_msg = ''
+    for (const key in err) {
+      err_msg += `${err[key]}\n`
+    }
+    uni.showToast({ title: err_msg, icon: 'none' })
   }
 }
 </script>

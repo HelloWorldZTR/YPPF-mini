@@ -131,15 +131,17 @@
     "abortcontroller-polyfill": "^1.7.8",
     "alova": "^3.3.3",
     "dayjs": "1.11.10",
+    "husky": "^9.1.7",
     "pinia": "2.0.36",
     "pinia-plugin-persistedstate": "3.2.1",
     "vue": "^3.4.21",
     "vue-i18n": "9.1.9",
     "vue-router": "4.5.1",
-    "z-paging": "2.8.7",
-    "wot-design-uni": "latest"
+    "wot-design-uni": "latest",
+    "z-paging": "2.8.7"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@dcloudio/types": "^3.4.8",
@@ -173,7 +175,6 @@
     "cross-env": "^10.0.0",
     "eslint": "^9.31.0",
     "eslint-plugin-format": "^1.0.1",
-    "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "miniprogram-api-typings": "^4.1.0",
     "openapi-ts-request": "^1.10.0",

@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import { onMounted, ref } from 'vue'
+import { everydaySignIn } from '@/api/login'
+
 defineOptions({
   name: 'Home',
 })
@@ -12,37 +15,36 @@ definePage({
   },
 })
 
-const description = ref(
-  '暂时不能确定这里放什么',
-)
+const notifyRef = ref()
+
+// 计算 navbar 高度（44px + 状态栏高度）
+function getNavbarHeight() {
+  const systemInfo = uni.getSystemInfoSync()
+  const statusBarHeight = systemInfo.statusBarHeight || 0
+  const navbarHeight = 44 // navbar 默认高度
+  return navbarHeight + statusBarHeight
+}
+
+onMounted(async () => {
+  try {
+    const data = await everydaySignIn()
+    if (data?.message) {
+      const navbarHeight = getNavbarHeight()
+      notifyRef.value?.show({
+        message: data.message,
+        duration: 3000,
+        top: navbarHeight,
+      })
+    }
+  }
+  catch (error) {
+    console.error('每日签到失败:', error)
+  }
+})
 </script>
 
 <template>
-  <view class="bg-white px-4 pt-safe">
-    <view class="mt-10">
-      <image src="/static/logo.svg" alt="" class="mx-auto block h-28 w-28" />
-    </view>
-    <view class="mt-4 text-center text-4xl text-[#d14328]">
-      unibest
-    </view>
-    <view class="mb-8 mt-2 text-center text-2xl">
-      最好用的 uniapp 开发模板
-    </view>
-
-    <view class="m-auto mb-2 max-w-100 text-justify indent text-4">
-      {{ description }}
-    </view>
-    <view class="mt-4 text-center">
-      作者：
-      <text class="text-green-500">
-        菲鸽
-      </text>
-    </view>
-    <view class="mt-4 text-center">
-      官网地址：
-      <text class="text-green-500">
-        https://unibest.tech
-      </text>
-    </view>
-  </view>
+  <uv-navbar title="首页" placeholder="true" left-icon="" />
+  <uv-notify ref="notifyRef" />
+  <view class="bg-white px-4 pt-safe" />
 </template>
