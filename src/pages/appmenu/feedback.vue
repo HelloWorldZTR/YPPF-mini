@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import type { IViolationAppoint } from '@/api/types/appoint'
 import type { Feedback, FeedbackCreate, FeedbackType, SolveStatus } from '@/api/types/feedback'
+import { getMyViolations } from '@/api/appoint'
 import {
   createFeedback,
   getFeedbackTypes,
@@ -32,6 +34,16 @@ const formTypeId = ref<string | number>('')
 const formTitle = ref('')
 const formContent = ref('')
 const formSubmitting = ref(false)
+
+/** 是否从申诉入口进入：锁定标题为「预约申诉(aid)」不可修改 */
+const isAppealFromAid = ref(false)
+
+/** 申诉相关：地下室预约问题反馈类型 id，用于匹配已有申诉 */
+const APPEAL_TYPE_ID = '地下室预约问题反馈'
+/** 申诉标题格式，用于查找已有申诉及锁定展示 */
+function appealTitle(aid: number) {
+  return `预约申诉(${aid})`
+}
 
 // 反馈类型选项（与网页一致，接口无数据时使用）
 const FEEDBACK_TYPE_OPTIONS: FeedbackType[] = [
@@ -185,18 +197,58 @@ function cardTitle(item: Feedback): string {
 }
 
 function goCreate() {
+  isAppealFromAid.value = false
+  formTitle.value = ''
   loadTypes()
   showCreateForm.value = true
 }
 
 function backToList() {
   showCreateForm.value = false
+  isAppealFromAid.value = false
+  formTitle.value = ''
   loadList()
 }
 
+/** 根据违规记录生成申诉预填内容（与后端 session 格式一致），末尾带申诉预约标记 */
+function buildAppealContent(v: IViolationAppoint): string {
+  const student = (v as any).major_student.Sname ?? '（当前用户）'
+  const room = v.Room ?? v.Rtitle ?? '—'
+  const startStr = v.Astart ? formatAppointDateTime(v.Astart) : '—'
+  const finishStr = v.Afinish_hour_minute ?? (v.Afinish ? v.Afinish.slice(11, 16) : '—')
+  const reason = v.Areason ?? '（待填写）'
+  const lines = [
+    `申请人：${student}`,
+    `房间：${room}`,
+    `预约时间：${startStr} - ${finishStr}`,
+    `违规原因：${reason}`,
+  ]
+  return lines.join('\n')
+}
+
+function formatAppointDateTime(iso: string): string {
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}年${m}月${day}日 ${h}:${min}`
+}
+
+/** 在我的反馈中查找该预约是否已有申诉（仅按类型 + 标题「预约申诉(aid)」） */
+function findExistingAppealByAid(items: Feedback[], aid: number): Feedback | undefined {
+  const title = appealTitle(aid)
+  return items.find((item) => {
+    if (String(item.feedback_type) !== String(APPEAL_TYPE_ID))
+      return false
+    const firstLine = (item.content ?? '').split('\n')[0]?.trim() ?? ''
+    return firstLine === title
+  })
+}
+
 function onCardClick(item: Feedback) {
-  // 可后续接详情页：uni.navigateTo({ url: `/pages/appmenu/feedbackDetail?id=${item.id}` })
-  uni.showToast({ title: '详情页开发中', icon: 'none' })
+  uni.navigateTo({ url: `/pages/appmenu/feedbackDetail?id=${item.id}` })
 }
 
 async function submitFeedback(asDraft: boolean) {
@@ -227,6 +279,7 @@ async function submitFeedback(asDraft: boolean) {
     uni.showToast({ title: asDraft ? '草稿已保存' : '提交成功', icon: 'success' })
     formTitle.value = ''
     formContent.value = ''
+    isAppealFromAid.value = false
     loadMyFeedback()
     if (!asDraft)
       backToList()
@@ -241,6 +294,72 @@ async function submitFeedback(asDraft: boolean) {
     formSubmitting.value = false
   }
 }
+
+/** 处理从 querystring 进入的申诉/预填：feedback_id → 跳转详情；aid → 已有申诉跳转否则预填；type/content → 预填表单 */
+onLoad(async (options: Record<string, string> = {}) => {
+  const feedbackId = options.feedback_id ?? options.id
+  const typeParam = options.type ?? options.feedback_type
+  const contentParam = options.content ?? options.feedback_content
+  const aidParam = options.aid ? Number(options.aid) : 0
+  const roomParam = options.room ? decodeURIComponent(options.room) : ''
+
+  if (feedbackId) {
+    uni.redirectTo({ url: `/pages/appmenu/feedbackDetail?id=${feedbackId}` })
+    return
+  }
+
+  if (aidParam > 0) {
+    try {
+      const [draftRes, publishedRes] = await Promise.all([
+        listFeedback({ issue_status: 0, ordering: '-modify_time' }),
+        listFeedback({ issue_status: 1, ordering: '-feedback_time' }),
+      ])
+      const myAll = [...draftRes, ...publishedRes]
+      const existing = findExistingAppealByAid(myAll, aidParam)
+      if (existing) {
+        uni.redirectTo({ url: `/pages/appmenu/feedbackDetail?id=${existing.id}` })
+        return
+      }
+      const violationsRes = await getMyViolations()
+      const violation = violationsRes?.vio_list?.find(v => v.Aid === aidParam)
+      formTitle.value = appealTitle(aidParam)
+      isAppealFromAid.value = true
+      if (violation) {
+        formContent.value = buildAppealContent(violation)
+        formTypeId.value = APPEAL_TYPE_ID
+      }
+      else {
+        formContent.value = [
+          `申请人：（待填写）`,
+          `房间：${roomParam || '—'}`,
+          `预约ID：${aidParam}`,
+          `违规原因：（待填写）`,
+        ].join('\n')
+        formTypeId.value = APPEAL_TYPE_ID
+      }
+      await loadTypes()
+      if (!feedbackTypes.value.some(t => String(t.id) === String(APPEAL_TYPE_ID)))
+        formTypeId.value = feedbackTypes.value[0]?.id ?? APPEAL_TYPE_ID
+      showCreateForm.value = true
+    }
+    catch (e) {
+      console.error('申诉预填失败', e)
+      uni.showToast({ title: '加载失败', icon: 'none' })
+    }
+    return
+  }
+
+  if (typeParam || contentParam) {
+    if (typeParam)
+      formTypeId.value = decodeURIComponent(typeParam)
+    if (contentParam)
+      formContent.value = decodeURIComponent(contentParam)
+    await loadTypes()
+    if (typeParam && !feedbackTypes.value.some(t => String(t.id) === String(formTypeId.value)))
+      formTypeId.value = feedbackTypes.value[0]?.id ?? formTypeId.value
+    showCreateForm.value = true
+  }
+})
 
 onMounted(() => {
   loadList()
@@ -279,16 +398,19 @@ onMounted(() => {
               </view>
             </picker>
           </view>
-          <!-- 反馈标题 -->
+          <!-- 反馈标题（从申诉入口进入时锁定为「预约申诉(aid)」） -->
           <view class="form-group mb-4">
             <text class="mb-2 block text-sm text-[#424344] font-medium">反馈标题</text>
-            <textarea
+            <input
               v-model="formTitle"
-              class="form-textarea"
+              type="text"
+              class="form-input"
+              :class="{ 'form-input-disabled': isAppealFromAid }"
               placeholder="标题不能超过25字符噢！"
               :maxlength="25"
-              show-confirm-bar
-            />
+              :disabled="isAppealFromAid"
+            >
+            <text v-if="isAppealFromAid" class="mt-1 block text-xs text-gray-500">申诉标题不可修改</text>
             <text class="mt-2 block text-xs text-[#424344] font-bold">请文明理性发言，共同营造良好的网络环境！</text>
           </view>
           <!-- 接收小组类型 -->
@@ -713,6 +835,25 @@ onMounted(() => {
   color: #424344;
   font-size: 28rpx;
   box-sizing: border-box;
+}
+.form-textarea-disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid #e5e7eb;
+  background: #fff;
+  color: #424344;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+.form-input-disabled {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 .form-textarea-large {
   min-height: 240rpx;
