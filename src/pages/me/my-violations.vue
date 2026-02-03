@@ -35,9 +35,8 @@ async function fetchData() {
 
 function handleAppeal(aid: number, room: string | null | undefined) {
   const roomParam = room ? `&room=${encodeURIComponent(room)}` : ''
-  // FIXME: 申诉页面的地址
   uni.navigateTo({
-    url: `/pages/appoint/appeal?aid=${aid}${roomParam}`,
+    url: `/pages/appmenu/feedback?aid=${aid}${roomParam}`,
   })
 }
 
@@ -51,7 +50,9 @@ onShow(() => {
     <!-- 信用分卡片 -->
     <view v-if="violations || loading" class="mx-4 mt-4 overflow-hidden border border-blue-100 rounded-lg bg-white shadow-sm">
       <view class="border-b border-blue-100 from-blue-50 to-cyan-50 bg-gradient-to-r px-4 py-4">
-        <view class="text-sm text-gray-600 mb-1">当前信用分</view>
+        <view class="mb-1 text-sm text-gray-600">
+          当前信用分
+        </view>
         <view class="flex items-center gap-2">
           <text class="text-3xl text-blue-600 font-bold">{{ credit }}</text>
           <text class="text-sm text-gray-500">分</text>
