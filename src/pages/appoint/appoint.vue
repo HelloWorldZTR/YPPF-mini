@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import type { IIndexResponse, IRoom } from '@/api/types/appoint'
-import { getIndexStatus } from '@/api/appoint'
+import { getAgreement, getIndexStatus } from '@/api/appoint'
 import { usePageRefresh } from '@/hooks/usePageRefresh'
-import { getGlobalError } from '@/utils/globalError'
 
 definePage({
   style: {
@@ -15,9 +14,7 @@ definePage({
 const statusData = ref<IIndexResponse>()
 const loading = ref(false)
 const activeTab = ref(0)
-// 如果是后续出错了，会在queryString中显示错误信息
-const errorMsg = getGlobalError()
-const toastErrorRef = ref()
+const agreementTime = ref<string | null>(null)
 
 // 公告列表
 const announcements = computed(() => {
@@ -118,10 +115,23 @@ async function fetchData() {
   }
 }
 
+async function checkAgreementStatus() {
+  const res = await getAgreement()
+  if (!res.agree_time) {
+    uni.navigateTo({
+      url: `/pages/appoint/agreement`,
+    })
+    return
+  }
+  agreementTime.value = res.agree_time
+  console.log(agreementTime.value)
+}
+
 // 页面自动刷新：从其他页面返回时自动更新数据
 usePageRefresh(
   async () => {
     await fetchData()
+    await checkAgreementStatus()
   },
   {
     minInterval: 2000,

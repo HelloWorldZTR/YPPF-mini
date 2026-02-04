@@ -22,13 +22,15 @@ const selectedEndId = ref<number | null>(null)
 
 // 当前选中日期的时间段列表
 const currentTimeSections = computed(() => {
-  if (selectedDayIndex.value === null || !data.value?.dayrange_list?.length) return []
+  if (selectedDayIndex.value === null || !data.value?.dayrange_list?.length)
+    return []
   return data.value.dayrange_list[selectedDayIndex.value]?.timesection || []
 })
 
 // 当前选中的日期信息
 const currentDay = computed(() => {
-  if (selectedDayIndex.value === null || !data.value?.dayrange_list?.length) return null
+  if (selectedDayIndex.value === null || !data.value?.dayrange_list?.length)
+    return null
   return data.value.dayrange_list[selectedDayIndex.value]
 })
 
@@ -39,9 +41,12 @@ function isTimeAvailable(section: ITimeSection): boolean {
 
 // 判断时间段是否被选中（需要考虑日期）
 function isTimeSelected(dayIndex: number, section: ITimeSection): boolean {
-  if (selectedDayIndex.value !== dayIndex) return false
-  if (selectedStartId.value === null) return false
-  if (selectedEndId.value === null) return section.id === selectedStartId.value
+  if (selectedDayIndex.value !== dayIndex)
+    return false
+  if (selectedStartId.value === null)
+    return false
+  if (selectedEndId.value === null)
+    return section.id === selectedStartId.value
 
   const daySections = data.value?.dayrange_list[dayIndex]?.timesection || []
   const startIdx = daySections.findIndex(s => s.id === selectedStartId.value)
@@ -68,7 +73,8 @@ function isEndTime(dayIndex: number, section: ITimeSection): boolean {
 
 // 点击时间段
 function onTimeClick(dayIndex: number, section: ITimeSection) {
-  if (!isTimeAvailable(section)) return
+  if (!isTimeAvailable(section))
+    return
 
   const daySections = data.value?.dayrange_list[dayIndex]?.timesection || []
 
@@ -150,18 +156,21 @@ function onTimeClick(dayIndex: number, section: ITimeSection) {
 
 // 获取选中的时间范围文字
 const selectedTimeRange = computed(() => {
-  if (selectedStartId.value === null || selectedDayIndex.value === null) return ''
+  if (selectedStartId.value === null || selectedDayIndex.value === null)
+    return ''
 
   const daySections = data.value?.dayrange_list[selectedDayIndex.value]?.timesection || []
   const startSection = daySections.find(s => s.id === selectedStartId.value)
-  if (!startSection) return ''
+  if (!startSection)
+    return ''
 
   if (selectedEndId.value === null) {
     return `${startSection.starttime} 起`
   }
 
   const endSection = daySections.find(s => s.id === selectedEndId.value)
-  if (!endSection) return ''
+  if (!endSection)
+    return ''
 
   // 计算实际的开始和结束时间
   const startIdx = daySections.findIndex(s => s.id === selectedStartId.value)
@@ -198,7 +207,8 @@ function goBack() {
 
 // 前往 checkout 页面
 function goToCheckout() {
-  if (!canSubmit.value || !currentDay.value || selectedDayIndex.value === null) return
+  if (!canSubmit.value || !currentDay.value || selectedDayIndex.value === null)
+    return
 
   const daySections = data.value?.dayrange_list[selectedDayIndex.value]?.timesection || []
 
@@ -242,6 +252,11 @@ async function fetchData() {
   }
 }
 
+function openAgreement() {
+  uni.navigateTo({
+    url: `/pages/appoint/agreement`,
+  })
+}
 </script>
 
 <template>
@@ -252,15 +267,14 @@ async function fetchData() {
     :placeholder="true"
     left-icon="arrow-left"
     @left-click="goBack"
-  >
-  </uv-navbar>
+  />
 
   <!-- 加载状态 -->
   <view v-if="loading" class="flex items-center justify-center py-20">
     <uv-loading-icon mode="circle" />
   </view>
 
-  <view v-else-if="data" class="bg-gray-50 pb-safe min-h-screen">
+  <view v-else-if="data" class="min-h-screen bg-gray-50 pb-safe">
     <!-- 房间信息卡片 -->
     <view class="mx-3 mt-3 rounded-lg bg-white p-4 shadow-sm">
       <view class="text-lg text-gray-800 font-bold">
@@ -287,7 +301,7 @@ async function fetchData() {
     <!-- 图例说明 -->
     <view class="mx-3 mt-2 flex items-center gap-4 text-xs text-gray-500">
       <view class="flex items-center gap-1">
-        <view class="h-3 w-3 rounded border border-gray-200 bg-white" />
+        <view class="h-3 w-3 border border-gray-200 rounded bg-white" />
         <text>可选</text>
       </view>
       <view class="flex items-center gap-1">
@@ -302,7 +316,7 @@ async function fetchData() {
 
     <!-- 时间段表格（每天一列，横向滚动） -->
     <scroll-view scroll-x class="mt-3" :show-scrollbar="false">
-      <view class="flex px-3 pb-32 gap-2">
+      <view class="flex gap-2 px-3 pb-32">
         <!-- 每一天为一列 -->
         <view
           v-for="(day, dayIndex) in data.dayrange_list"
@@ -326,7 +340,7 @@ async function fetchData() {
             <view
               v-for="section in day.timesection"
               :key="section.id"
-              class="relative flex items-center justify-center rounded-lg border py-2.5 transition-all"
+              class="relative flex items-center justify-center border rounded-lg py-2.5 transition-all"
               :class="[
                 isTimeAvailable(section)
                   ? isTimeSelected(dayIndex, section)
@@ -362,7 +376,7 @@ async function fetchData() {
     </scroll-view>
 
     <!-- 底部确认按钮 -->
-    <view class="fixed bottom-0 left-0 right-0 bg-white px-4 pb-safe pt-3 shadow-lg">
+    <view class="fixed bottom-0 left-0 right-0 bg-white px-4 pt-3 shadow-lg pb-safe">
       <view class="mb-2 text-center text-sm text-gray-600">
         <text v-if="selectedTimeRange">{{ currentDay?.weekday }} {{ selectedTimeRange }}</text>
         <text v-else class="text-gray-400">请选择预约时段</text>
@@ -387,16 +401,25 @@ async function fetchData() {
   </view>
 
   <!-- 预约须知弹窗 -->
-   <!-- TODO: 内容还没写好-->
   <uv-popup ref="noticePopupRef" mode="center" :round="12">
     <view class="w-72 rounded-xl bg-white p-5">
-      <view class="mb-4 text-center text-lg text-gray-800 font-bold">预约须知</view>
+      <view class="mb-4 text-center text-lg text-gray-800 font-bold">
+        预约须知
+      </view>
       <view class="text-sm text-gray-600 leading-relaxed">
-        <view class="mb-2">1. 请在预约时间前到达，超时15分钟将自动取消预约。</view>
-        <view class="mb-2">2. 预约成功后如需取消，请提前1小时操作。</view>
-        <view class="mb-2">3. 无故缺席将影响信用分，连续违约可能限制预约权限。</view>
-        <view class="mb-2">4. 请保持房间整洁，使用后请关闭门窗和电源。</view>
-        <view>5. 如有疑问，请联系管理员。</view>
+        <view class="mb-2">
+          1. 预约开始时间前后15分钟内始终无人刷卡使用，或预约时间段内超过 40% 时间房间内实际人数未达到房间预约人数一半以上，将被扣除信用分。
+        </view>
+        <view class="mb-2">
+          2. 个人每天最多预约时长为3小时，同一时段不可预约多个房间。
+        </view>
+        <view class="mb-2">
+          3. 小组账户可以长期预约，不受上述限制，长期预约时可以选择本周开始或者下周开始。
+        </view>
+        <view class="mb-2">
+          4. 更多使用规则请参考<text class="text-blue-500" @click="openAgreement">《35楼地下室使用规范》</text>。
+        </view>
+        <view>5. 如果无法预约，可在应用界面尝试旧版预约，或在反馈中心进行反馈，我们会在后续更新中修复。</view>
       </view>
       <button
         class="mt-5 w-full rounded-lg bg-blue-500 py-2.5 text-white"
