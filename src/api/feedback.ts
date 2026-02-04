@@ -52,3 +52,11 @@ export function deleteFeedback(id: string) {
 export function getFeedbackTypes() {
   return http.get<FeedbackType[]>('/api/v2/feedback/types/')
 }
+
+/**
+ * 获取所有公开的反馈（公示栏用）
+ * 返回所有已解决/无法解决且公开的反馈，不限制用户
+ */
+export function listPublicFeedback(query?: { ordering?: string }) {
+  return http.get<Feedback[]>('/api/v2/feedback/public/', query)
+}
