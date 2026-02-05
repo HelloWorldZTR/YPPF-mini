@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import { storeToRefs } from 'pinia'
+import { useUserStore } from '@/store/user'
+
 definePage({
   style: {
     navigationBarTitleText: '应用中心',
@@ -7,7 +10,10 @@ definePage({
   },
 })
 
-const appGroups = [
+const userStore = useUserStore()
+const { userInfo } = storeToRefs(userStore)
+
+const APP_LIST_PERSON = [
   {
     name: '实用工具',
     apps: [
@@ -36,6 +42,30 @@ const appGroups = [
     ],
   },
 ]
+
+const APP_LIST_ORG = [
+  {
+    name: '实用工具',
+    apps: [
+      { name: '反馈中心', icon: 'i-carbon-chat-bot', color: 'text-green-500', url: '/pages/appmenu/feedback' },
+      { name: '旧版预约', icon: 'i-carbon-calendar', color: 'text-pink-600', url: '/pages/generic/webview?uri=/underground' },
+    ],
+  },
+  {
+    name: '小组管理',
+    apps: [
+      { name: '小组一览', icon: 'i-carbon-event', color: 'text-teal-500', url: '/pages/generic/webview?uri=/subscribeOrganization' },
+      { name: '活动立项', icon: 'i-carbon-task-add', color: 'text-yellow-600', url: '/pages/generic/webview?uri=/showActivity' },
+      { name: '活动结项', icon: 'i-carbon-task-complete', color: 'text-pink-600', url: '/pages/generic/webview?uri=/endActivity' },
+      { name: '成员申请', icon: 'i-carbon-user-follow', color: 'text-purple-600', url: '/pages/generic/webview?uri=/showPosition' },
+      { name: '信息发送', icon: 'i-carbon-send', color: 'text-blue-600', url: '/pages/generic/webview?uri=/sendMessage' },
+    ],
+  },
+]
+
+const appGroups = computed(() => {
+  return userInfo.value.is_person ? APP_LIST_PERSON : APP_LIST_ORG
+})
 
 function handleAppClick(url: string) {
   console.log('handleAppClick', url)

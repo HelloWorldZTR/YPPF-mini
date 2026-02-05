@@ -28,8 +28,9 @@ export interface IWxLoginRes {
   // status=bound
   token?: string
   token_type?: string
-  username?: string
-  name?: string
+  account_id?: string // 主账号
+  username?: string // 主账号或小组账号
+  name?: string // 名字，不是账号
   // status=unbound
   signed_openid?: string
   expires_in: number
@@ -42,6 +43,7 @@ export interface IWxBindRes {
   status: 'bound'
   token: string
   token_type: string
+  account_id: string
   username: string
   expires_in: number
 }
@@ -52,6 +54,7 @@ export interface IWxBindRes {
 export interface IUserInfoRes {
   id?: number
   userId: number // keeping for backward compatibility if used elsewhere
+  account_id: string
   username: string
   nickname: string
   name?: string

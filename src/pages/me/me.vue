@@ -23,6 +23,8 @@ const { userInfo } = storeToRefs(userStore)
 
 // 默认头像
 const defaultAvatar = '/static/images/default-avatar.png'
+// 只有登录到主账号的时候才显示解绑按钮
+const showUnbind = computed(() => userInfo.value.account_id === userInfo.value.username)
 
 // 微信小程序下登录
 async function handleLogin() {
@@ -51,6 +53,26 @@ function handleUnbind() {
       }
     },
   })
+}
+
+async function handleGotoMain() {
+  try {
+    await tokenStore.wxLogin(userInfo.value.account_id)
+    uni.showToast({
+      title: '切换成功',
+      icon: 'success',
+    })
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/me/me' })
+    }, 1500)
+  }
+  catch (error) {
+    console.error('切换账户失败:', error)
+    uni.showToast({
+      title: '切换失败，请重试',
+      icon: 'error',
+    })
+  }
 }
 
 /* 通知红点显示逻辑 */
@@ -191,13 +213,21 @@ function handleProfile() {
         </view>
       </view>
 
-      <!-- 退出登录按钮 -->
-      <view v-if="tokenStore.hasLogin" class="mt-8 px-2">
+      <!-- 解绑按钮 -->
+      <view v-if="tokenStore.hasLogin && showUnbind" class="mt-8 px-2">
         <button
           class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-red-500 font-medium shadow-sm transition-opacity active:opacity-70"
           @click="handleUnbind"
         >
           解除绑定
+        </button>
+      </view>
+      <view v-else class="mt-8 px-2">
+        <button
+          class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-blue-500 font-medium shadow-sm transition-opacity active:opacity-70"
+          @click="handleGotoMain"
+        >
+          返回主账号
         </button>
       </view>
     </view>

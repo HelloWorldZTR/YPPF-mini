@@ -66,9 +66,13 @@ async function handleBind() {
         expiresIn: res.expires_in,
       }
       tokenStore.setTokenInfo(tokenData)
-      // 进一步获取用户数据（如头像，email等等）
       const userInfo = await getUserMe()
-      userStore.setUserInfo(userInfo)
+      // 保持account_id
+      userStore.setUserInfo({
+        ...userInfo,
+        account_id: res.account_id ?? '',
+        username: res.username ?? '',
+      })
       uni.showToast({ title: '绑定成功', icon: 'success' })
       setTimeout(() => {
         uni.reLaunch({ url: '/pages/index/index' })
@@ -88,7 +92,7 @@ async function handleBind() {
         绑定现有账号
       </view>
       <view class="bind-header__desc">
-        请使用网页版 YPPF 账号完成绑定
+        请使用网页版 YPPF 个人账号完成绑定。如需登录小组账号，可以在“我的-切换账号”中登录您管理的小组。
       </view>
     </view>
 
