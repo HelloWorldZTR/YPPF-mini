@@ -5,6 +5,7 @@ import { onMounted } from 'vue'
 import { getMyAccounts } from '@/api/login'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
+import { toBackendURL } from '@/utils'
 
 definePage({
   style: {
@@ -112,9 +113,6 @@ onMounted(() => {
           <view class="text-lg text-gray-800 font-semibold">
             {{ userInfo.name || userInfo.username || '未设置昵称' }}
           </view>
-          <view class="mt-1 text-sm text-gray-500">
-            {{ userInfo.username }}
-          </view>
         </view>
         <view class="ml-4 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-600">
           当前
@@ -145,15 +143,15 @@ onMounted(() => {
         >
           <view class="flex-1">
             <view class="flex items-center">
-              <view class="text-lg text-gray-800 font-semibold">
+              <view class="h-10 w-10 flex-shrink-0 overflow-hidden border-4 border-white/20 rounded-full bg-white shadow-sm">
+                <image :src="toBackendURL(account.avatar)" class="h-full w-full" mode="aspectFill" />
+              </view>
+              <view class="pl-4 text-lg text-gray-800 font-semibold">
                 {{ account.name || account.username }}
               </view>
               <view class="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                 {{ getAccountTypeText(account.type) }}
               </view>
-            </view>
-            <view class="mt-1 text-sm text-gray-500">
-              {{ account.username }}
             </view>
           </view>
           <view class="i-carbon-chevron-right ml-4 text-sm text-gray-300" />

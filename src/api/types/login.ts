@@ -149,6 +149,7 @@ export interface IAccount {
   username: string
   name: string
   type: 'person' | 'org'
+  avatar: string
 }
 
 export interface ICheckLoginRes {
