@@ -60,3 +60,21 @@ export function getFeedbackTypes() {
 export function listPublicFeedback(query?: { ordering?: string }) {
   return http.get<Feedback[]>('/api/v2/feedback/public/', query)
 }
+
+/**
+ * 获取当前用户"进行中"的反馈列表
+ * 规则：issue_status=已发布，且解决状态为【解决中】或【未标记】
+ * 仅个人账号可访问
+ */
+export function listInProgressFeedback(query?: { ordering?: string }) {
+  return http.get<Feedback[]>('/api/v2/feedback/in-progress/', query)
+}
+
+/**
+ * 获取当前用户"已结束"的反馈列表
+ * 规则：issue_status=已发布，且解决状态为【已解决】或【无法解决】
+ * 仅个人账号可访问
+ */
+export function listDoneFeedback(query?: { ordering?: string }) {
+  return http.get<Feedback[]>('/api/v2/feedback/done/', query)
+}

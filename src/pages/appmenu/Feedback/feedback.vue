@@ -3,10 +3,12 @@ import type { Feedback, FeedbackType, SolveStatus } from '@/api/types/feedback'
 import {
   deleteFeedback,
   getFeedbackTypes,
+  listDoneFeedback,
   listFeedback,
+  listInProgressFeedback,
   listPublicFeedback,
 } from '@/api/feedback'
-import FeedbackForm from './FeedbackForm.vue'
+import FeedbackForm from './feedbackForm.vue'
 
 definePage({
   style: {
@@ -79,73 +81,24 @@ async function loadList() {
   }
 }
 
-// 我的反馈：草稿箱、进行中、已结束
+// 我的反馈：草稿箱、进行中、已结束（全部由后端负责分类计算）
 async function loadMyFeedback() {
   try {
     myListLoading.value = true
-    // 并行加载草稿和已发布的反馈
-    const [draftRes, publishedRes] = await Promise.all([
+    // 并行加载草稿、进行中、已结束的反馈（后端负责计算分类）
+    const [draftRes, inProgressRes, doneRes] = await Promise.all([
+      // 草稿：issue_status=草稿，由现有列表接口按状态过滤
       listFeedback({ issue_status: 0, ordering: '-modify_time' }),
-      listFeedback({ issue_status: 1, ordering: '-feedback_time' }),
+      // 进行中：后端 /api/v2/feedback/in-progress/ 已经按规则过滤好
+      listInProgressFeedback({ ordering: '-feedback_time' }),
+      // 已结束：后端 /api/v2/feedback/done/ 已经按规则过滤好
+      listDoneFeedback({ ordering: '-feedback_time' }),
     ])
 
-    // 调试：打印所有已发布反馈的状态
-    console.log('已发布反馈列表:', publishedRes.map(item => ({
-      id: item.id,
-      title: item.title,
-      solve_status: item.solve_status,
-      solve_status_type: typeof item.solve_status,
-      solve_status_display: item.solve_status_display,
-      publisher_public: item.publisher_public,
-    })))
-
-    // 草稿箱：issue_status === 0
+    // 直接使用后端返回的数据，不再进行前端计算
     myDraftList.value = draftRes
-
-    // 已结束：issue_status === 1 && (solve_status === 1 || solve_status === 2)
-    // 如果 solve_status_display 是"已解决"或"无法解决"，也归类为已结束（兼容处理）
-    // 优先判断已结束，避免重复分类
-    myDoneList.value = publishedRes.filter(
-      (item) => {
-        const status = Number(item.solve_status)
-        const display = item.solve_status_display || ''
-        // 优先使用状态码判断，如果状态码不对但显示文本对，也归类为已结束
-        return status === 1 || status === 2 || display === '已解决' || display === '无法解决'
-      },
-    )
-
-    // 进行中：issue_status === 1 && (solve_status === 0 || solve_status === 3)
-    // solve_status=3 可能是后端返回的"未标记"状态，视为处理中
-    // 排除已经在"已结束"中的反馈，避免重复分类
-    const doneIds = new Set(myDoneList.value.map(item => item.id))
-    myInProgressList.value = publishedRes.filter(
-      (item) => {
-        // 如果已经在"已结束"中，不在"进行中"
-        if (doneIds.has(item.id)) {
-          return false
-        }
-        const status = Number(item.solve_status)
-        const display = item.solve_status_display || ''
-        // 如果显示文本是"已解决"或"无法解决"，不在"进行中"
-        if (display === '已解决' || display === '无法解决') {
-          return false
-        }
-        return status === 0 || status === 3
-      },
-    )
-
-    // 调试：打印分类结果
-    console.log('进行中数量:', myInProgressList.value.length, '已结束数量:', myDoneList.value.length)
-    console.log('进行中列表:', myInProgressList.value.map(item => ({
-      id: item.id,
-      solve_status: item.solve_status,
-      solve_status_display: item.solve_status_display,
-    })))
-    console.log('已结束列表:', myDoneList.value.map(item => ({
-      id: item.id,
-      solve_status: item.solve_status,
-      solve_status_display: item.solve_status_display,
-    })))
+    myInProgressList.value = inProgressRes
+    myDoneList.value = doneRes
   }
   catch (e) {
     console.error('加载我的反馈失败', e)
