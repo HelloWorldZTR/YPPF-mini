@@ -1,7 +1,7 @@
 import type { IDoubleTokenRes } from '@/api/types/login'
 import type { CustomRequestOptions, IResponse } from '@/http/types'
 import { nextTick } from 'vue'
-import { LOGIN_PAGE_LIST } from '@/router/config'
+import { BIND_PAGE, LOGIN_PAGE_LIST } from '@/router/config'
 import { useTokenStore } from '@/store/token'
 import { isDoubleTokenMode } from '@/utils'
 import { toLoginPage } from '@/utils/toLoginPage'
@@ -82,8 +82,15 @@ export function http<T>(options: CustomRequestOptions) {
           if (!isDoubleTokenMode) {
             // #ifdef MP-WEIXIN
             console.log('token 过期，尝试重新登录')
-            await tokenStore.wxLogin()
-            // 重新尝试发送请求
+            const res = await tokenStore.wxLogin()
+            // 未绑定账号，跳转到绑定页面，防止死锁
+            if (res.status === 'unbound') {
+              uni.navigateTo({
+                url: `${BIND_PAGE}?signed_openid=${encodeURIComponent(res.signed_openid)}`,
+              })
+              return reject(res)
+            }
+            // 绑定的账号，说明登录了，重新尝试发送请求
             return resolve(http<T>(options))
             // #endif
             // 其他平台走正常流程
