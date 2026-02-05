@@ -1,11 +1,13 @@
 <script lang="ts" setup>
-import type { IViolationAppoint } from '@/api/types/appoint'
-import type { Feedback, FeedbackCreate, FeedbackType, SolveStatus } from '@/api/types/feedback'
-import { getMyViolations } from '@/api/appoint'
+import type { Feedback, FeedbackType, SolveStatus } from '@/api/types/feedback'
+import { onShow } from '@dcloudio/uni-app'
 import {
-  createFeedback,
+  deleteFeedback,
   getFeedbackTypes,
+  listDoneFeedback,
   listFeedback,
+  listInProgressFeedback,
+  listPublicFeedback,
 } from '@/api/feedback'
 
 definePage({
@@ -15,9 +17,6 @@ definePage({
     navigationBarTextStyle: 'white',
   },
 })
-
-// 列表视图 / 写反馈表单
-const showCreateForm = ref(false)
 
 const feedbackTypes = ref<FeedbackType[]>([])
 const list = ref<Feedback[]>([])
@@ -30,89 +29,47 @@ const myInProgressList = ref<Feedback[]>([])
 const myDoneList = ref<Feedback[]>([])
 const myListLoading = ref(false)
 
-const formTypeId = ref<string | number>('')
-const formTitle = ref('')
-const formContent = ref('')
-const formSubmitting = ref(false)
+/**
+ * 状态说明：
+ * - issue_status=0: 草稿
+ * - issue_status=1: 已发布
+ * - solve_status=0: 处理中（issue_status=1时自动变为0）
+ * - solve_status=1: 已解决
+ * - solve_status=2: 无法解决
+ * - solve_status=3: 未标记（后端可能返回，视为处理中）
+ *
+ * 分类规则：
+ * - 草稿箱：issue_status === 0
+ * - 进行中：issue_status === 1 && (solve_status === 0 || solve_status === 3)
+ * - 已结束：issue_status === 1 && (solve_status === 1 || solve_status === 2)
+ * - 公示栏：issue_status === 1 && (solve_status === 1 || solve_status === 2) && publisher_public === true
+ */
 
-/** 是否从申诉入口进入：锁定标题为「预约申诉(aid)」不可修改 */
-const isAppealFromAid = ref(false)
-
-/** 申诉相关：地下室预约问题反馈类型 id，用于匹配已有申诉 */
-const APPEAL_TYPE_ID = '地下室预约问题反馈'
-/** 申诉标题格式，用于查找已有申诉及锁定展示 */
-function appealTitle(aid: number) {
-  return `预约申诉(${aid})`
-}
-
-// 反馈类型选项（与网页一致，接口无数据时使用）
-const FEEDBACK_TYPE_OPTIONS: FeedbackType[] = [
-  { id: '35楼生活权益反馈', name: '35楼生活权益反馈' },
-  { id: '地下室预约问题反馈', name: '地下室预约问题反馈' },
-  { id: '智慧书院系统反馈', name: '智慧书院系统反馈' },
-  { id: '团校反馈', name: '团校反馈' },
-  { id: '学生会工作反馈', name: '学生会工作反馈' },
-  { id: '通识课反馈', name: '通识课反馈' },
-  { id: '学术问题/培养方案反馈', name: '学术问题/培养方案反馈' },
-  { id: '书院课程反馈', name: '书院课程反馈' },
-  { id: '校内权益问题反馈', name: '校内权益问题反馈' },
-  { id: '其他反馈', name: '其他反馈' },
-]
-
-// 接收小组类型（与网页一致）
-const orgTypeOptions = [
-  { value: '书院俱乐部', label: '书院俱乐部' },
-  { value: '书院课程', label: '书院课程' },
-  { value: '体育队', label: '体育队' },
-  { value: '元培学院', label: '元培学院' },
-  { value: '团委', label: '团委' },
-  { value: '学学学委员会', label: '学学学委员会' },
-  { value: '学学学学会', label: '学学学学会' },
-  { value: '学生会', label: '学生会' },
-  { value: '学生小组', label: '学生小组' },
-]
-// 接收小组（按类型联动，与网页一致）
-const orgByType: Record<string, { value: string, label: string }[]> = {
-  书院俱乐部: [{ value: '书院俱乐部', label: '书院俱乐部' }],
-  书院课程: [{ value: '书院课程', label: '书院课程' }],
-  体育队: [{ value: '体育队', label: '体育队' }],
-  元培学院: [{ value: '元培学院', label: '元培学院' }],
-  团委: [{ value: '团委', label: '团委' }],
-  学学学委员会: [{ value: '学学学委员会', label: '学学学委员会' }],
-  学学学学会: [{ value: '学学学学会', label: '学学学学会' }],
-  学生会: [
-    { value: '学生会主席团', label: '学生会主席团' },
-    { value: '文娱生活部', label: '文娱生活部' },
-    { value: '体育竞技部', label: '体育竞技部' },
-    { value: '实践交流部', label: '实践交流部' },
-    { value: '内联权益部', label: '内联权益部' },
-    { value: '对外联络部', label: '对外联络部' },
-    { value: '文宣策划部', label: '文宣策划部' },
-  ],
-  学生小组: [{ value: '学生小组', label: '学生小组' }],
-}
-const formOrgType = ref('学生会')
-const formOrg = ref('内联权益部')
-
-const orgOptions = computed(() => orgByType[formOrgType.value] ?? [])
-
-watch(orgOptions, (options) => {
-  const has = options.some(o => o.value === formOrg.value)
-  if (options.length && !has)
-    formOrg.value = options[0].value
-}, { immediate: true })
-
-// 公示栏：只拉已发布的反馈，按时间倒序
+// 公示栏：只展示已结束且公开的反馈（所有用户的）
 async function loadList() {
   try {
     listLoading.value = true
-    list.value = await listFeedback({
-      issue_status: 1,
+    // 使用新的公开反馈接口，获取所有用户的公开反馈
+    // 后端已经过滤了：已发布 + 公开 + 已解决/无法解决
+    const publicFeedbacks = await listPublicFeedback({
       ordering: '-feedback_time',
     })
+
+    // 后端已经完成了所有过滤，前端直接使用即可
+    list.value = publicFeedbacks
+
+    // 调试：打印公示栏结果
+    console.log('公示栏列表:', list.value.map(item => ({
+      id: item.id,
+      title: item.title,
+      solve_status: item.solve_status,
+      solve_status_display: item.solve_status_display,
+      publisher_public: item.publisher_public,
+    })))
+    console.log('公示栏总数:', list.value.length)
   }
   catch (e) {
-    console.error('加载列表失败', e)
+    console.error('加载公示栏失败', e)
     uni.showToast({ title: '加载失败', icon: 'none' })
   }
   finally {
@@ -120,17 +77,24 @@ async function loadList() {
   }
 }
 
-// 我的反馈：草稿箱、进行中、已结束
+// 我的反馈：草稿箱、进行中、已结束（全部由后端负责分类计算）
 async function loadMyFeedback() {
   try {
     myListLoading.value = true
-    const [draftRes, publishedRes] = await Promise.all([
+    // 并行加载草稿、进行中、已结束的反馈（后端负责计算分类）
+    const [draftRes, inProgressRes, doneRes] = await Promise.all([
+      // 草稿：issue_status=草稿，由现有列表接口按状态过滤
       listFeedback({ issue_status: 0, ordering: '-modify_time' }),
-      listFeedback({ issue_status: 1, ordering: '-feedback_time' }),
+      // 进行中：后端 /api/v2/feedback/in-progress/ 已经按规则过滤好
+      listInProgressFeedback({ ordering: '-feedback_time' }),
+      // 已结束：后端 /api/v2/feedback/done/ 已经按规则过滤好
+      listDoneFeedback({ ordering: '-feedback_time' }),
     ])
+
+    // 直接使用后端返回的数据，不再进行前端计算
     myDraftList.value = draftRes
-    myInProgressList.value = publishedRes.filter(i => i.solve_status === 0 || i.solve_status === 1)
-    myDoneList.value = publishedRes.filter(i => i.solve_status === 2 || i.solve_status === 3)
+    myInProgressList.value = inProgressRes
+    myDoneList.value = doneRes
   }
   catch (e) {
     console.error('加载我的反馈失败', e)
@@ -148,42 +112,64 @@ function setMyFeedbackTab(tab: 'draft' | 'inProgress' | 'done') {
 async function loadTypes() {
   try {
     const apiTypes = await getFeedbackTypes()
-    feedbackTypes.value = apiTypes.length > 0 ? apiTypes : FEEDBACK_TYPE_OPTIONS
-    if (feedbackTypes.value.length && !formTypeId.value)
-      formTypeId.value = feedbackTypes.value[0].id
+    if (apiTypes.length > 0) {
+      feedbackTypes.value = apiTypes
+    }
   }
   catch (e) {
     console.error('加载反馈类型失败', e)
-    feedbackTypes.value = FEEDBACK_TYPE_OPTIONS
-    if (!formTypeId.value)
-      formTypeId.value = FEEDBACK_TYPE_OPTIONS[0].id
   }
 }
 
-// 网页版日期格式：2024年5月17日 16:50 公开
-function formatDatePublic(time: string | undefined) {
+// 网页版日期格式：2024年5月17日 16:50 公开/不公开
+function formatDatePublic(time: string | undefined, publisherPublic?: boolean) {
+  // 如果 publisher_public 是 undefined 或 null，默认当作 true（公开）处理
+  // 注意：false 值应该明确显示为"不公开"
+  const isPublic = publisherPublic === false ? false : (publisherPublic ?? true)
+  const publicText = isPublic ? '公开' : '不公开'
   if (!time)
-    return '— 公开'
+    return `— ${publicText}`
   const d = new Date(time)
   const y = d.getFullYear()
   const m = d.getMonth() + 1
   const day = d.getDate()
   const h = String(d.getHours()).padStart(2, '0')
   const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}年${m}月${day}日 ${h}:${min} 公开`
+  return `${y}年${m}月${day}日 ${h}:${min} ${publicText}`
 }
 
-// 解决状态文案与样式（与网页一致：已解决=绿，无法解决=蓝）
+// 草稿保存时间格式：2026年2月4日 18:03 保存
+function formatDateDraft(time: string | undefined) {
+  if (!time)
+    return '— 保存'
+  const d = new Date(time)
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}年${m}月${day}日 ${h}:${min} 保存`
+}
+
+/**
+ * 解决状态文案与样式
+ * solve_status=0: 处理中
+ * solve_status=1: 已解决（绿色）
+ * solve_status=2: 无法解决（蓝色）
+ * solve_status=3: 未标记（视为处理中）
+ */
 function solveStatusInfo(status: SolveStatus): { text: string, class: string } {
   switch (status) {
-    case 2:
-      return { text: '已解决', class: 'badge-success' }
-    case 3:
-      return { text: '无法解决', class: 'badge-primary' }
-    case 1:
+    case 0:
       return { text: '处理中', class: 'badge-warning' }
+    case 1:
+      return { text: '已解决', class: 'badge-success' }
+    case 2:
+      return { text: '无法解决', class: 'badge-primary' }
+    case 3:
+      return { text: '处理中', class: 'badge-warning' } // 未标记视为处理中
     default:
-      return { text: '待处理', class: 'badge-secondary' }
+      return { text: '未知状态', class: 'badge-secondary' }
   }
 }
 
@@ -196,102 +182,51 @@ function cardTitle(item: Feedback): string {
   return firstLine.length > 20 ? `${firstLine.slice(0, 20)}…` : firstLine
 }
 
+// 新建反馈
 function goCreate() {
-  isAppealFromAid.value = false
-  formTitle.value = ''
-  loadTypes()
-  showCreateForm.value = true
+  uni.navigateTo({ url: '/pages/appmenu/feedback/feedbackForm' })
 }
 
-function backToList() {
-  showCreateForm.value = false
-  isAppealFromAid.value = false
-  formTitle.value = ''
-  loadList()
+// 编辑草稿
+function goEditDraft(draft: Feedback) {
+  uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackForm?id=${draft.id}` })
 }
 
-/** 根据违规记录生成申诉预填内容（与后端 session 格式一致），末尾带申诉预约标记 */
-function buildAppealContent(v: IViolationAppoint): string {
-  const student = (v as any).major_student.Sname ?? '（当前用户）'
-  const room = v.Room ?? v.Rtitle ?? '—'
-  const startStr = v.Astart ? formatAppointDateTime(v.Astart) : '—'
-  const finishStr = v.Afinish_hour_minute ?? (v.Afinish ? v.Afinish.slice(11, 16) : '—')
-  const reason = v.Areason ?? '（待填写）'
-  const lines = [
-    `申请人：${student}`,
-    `房间：${room}`,
-    `预约时间：${startStr} - ${finishStr}`,
-    `违规原因：${reason}`,
-  ]
-  return lines.join('\n')
-}
+// 删除草稿
+async function handleDeleteDraft(draft: Feedback, e?: Event) {
+  if (e) {
+    e.stopPropagation() // 阻止事件冒泡，避免触发卡片点击
+  }
 
-function formatAppointDateTime(iso: string): string {
-  const d = new Date(iso)
-  const y = d.getFullYear()
-  const m = d.getMonth() + 1
-  const day = d.getDate()
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}年${m}月${day}日 ${h}:${min}`
-}
-
-/** 在我的反馈中查找该预约是否已有申诉（仅按类型 + 标题「预约申诉(aid)」） */
-function findExistingAppealByAid(items: Feedback[], aid: number): Feedback | undefined {
-  const title = appealTitle(aid)
-  return items.find((item) => {
-    if (String(item.feedback_type) !== String(APPEAL_TYPE_ID))
-      return false
-    const firstLine = (item.content ?? '').split('\n')[0]?.trim() ?? ''
-    return firstLine === title
+  uni.showModal({
+    title: '确认删除',
+    content: '确认要删除反馈草稿吗？',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await deleteFeedback(draft.id)
+          uni.showToast({ title: '删除成功', icon: 'success' })
+          await loadMyFeedback() // 刷新列表
+        }
+        catch (e: any) {
+          console.error('删除草稿失败', e)
+          const errorMsg = e?.response?.data?.detail || e?.message || '删除失败，请重试'
+          uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
+        }
+      }
+    },
   })
 }
 
+// 点击反馈卡片：草稿跳转编辑，已发布的跳转详情
 function onCardClick(item: Feedback) {
-  uni.navigateTo({ url: `/pages/appmenu/feedbackDetail?id=${item.id}` })
-}
-
-async function submitFeedback(asDraft: boolean) {
-  const typeId = formTypeId.value
-  const title = formTitle.value.trim()
-  const body = formContent.value.trim()
-  if (!typeId) {
-    uni.showToast({ title: '请选择反馈类型', icon: 'none' })
-    return
+  if (item.issue_status === 0) {
+    // 草稿：跳转编辑
+    goEditDraft(item)
   }
-  if (!asDraft && !body) {
-    uni.showToast({ title: '请填写反馈内容', icon: 'none' })
-    return
-  }
-  if (title.length > 25) {
-    uni.showToast({ title: '标题不能超过25字符', icon: 'none' })
-    return
-  }
-  const content = title ? `${title}\n${body}` : (body || '(草稿)')
-  try {
-    formSubmitting.value = true
-    const payload: FeedbackCreate = {
-      feedback_type: typeId,
-      content,
-      issue_status: asDraft ? 0 : 1,
-    }
-    await createFeedback(payload)
-    uni.showToast({ title: asDraft ? '草稿已保存' : '提交成功', icon: 'success' })
-    formTitle.value = ''
-    formContent.value = ''
-    isAppealFromAid.value = false
-    loadMyFeedback()
-    if (!asDraft)
-      backToList()
-    else
-      loadList()
-  }
-  catch (e) {
-    console.error('提交失败', e)
-    uni.showToast({ title: '提交失败', icon: 'none' })
-  }
-  finally {
-    formSubmitting.value = false
+  else {
+    // 已发布：跳转详情页
+    uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackDetail?id=${item.id}` })
   }
 }
 
@@ -365,125 +300,18 @@ onMounted(() => {
   loadList()
   loadMyFeedback()
 })
+
+// 页面显示时刷新列表（从表单页面返回时）
+onShow(() => {
+  loadList()
+  loadMyFeedback()
+})
 </script>
 
 <template>
   <view class="feedback-page min-h-screen bg-[#f8f9fa] pb-10">
-    <!-- 写反馈表单（与网页「反馈详情」一致，适配手机屏宽、防点击闪屏） -->
-    <view v-if="showCreateForm" class="feedback-form-screen">
-      <view class="feedback-form-header">
-        <view class="feedback-form-header-side" hover-class="none" @click="backToList">
-          <text class="i-carbon-arrow-left text-xl text-[#1b55e2]" />
-        </view>
-        <text class="feedback-form-title">反馈详情</text>
-        <view class="feedback-form-header-side feedback-form-header-right">
-          <text class="text-sm text-[#424344] underline">匿名</text>
-        </view>
-      </view>
-      <scroll-view scroll-y class="feedback-form-scroll" :show-scrollbar="false">
-        <view class="feedback-form-body">
-          <!-- 反馈类型 -->
-          <view class="form-group mb-4">
-            <text class="mb-2 block text-sm text-[#424344] font-medium">反馈类型</text>
-            <picker
-              :value="feedbackTypes.findIndex(t => t.id === formTypeId)"
-              :range="feedbackTypes"
-              range-key="name"
-              class="form-picker"
-              @change="(e: any) => { formTypeId = feedbackTypes[e.detail.value]?.id ?? '' }"
-            >
-              <view class="form-picker-inner">
-                <text class="form-picker-text ellipsis">{{ feedbackTypes.find(t => t.id === formTypeId)?.name ?? '请选择反馈类型' }}</text>
-                <text class="i-carbon-chevron-down form-picker-arrow" />
-              </view>
-            </picker>
-          </view>
-          <!-- 反馈标题（从申诉入口进入时锁定为「预约申诉(aid)」） -->
-          <view class="form-group mb-4">
-            <text class="mb-2 block text-sm text-[#424344] font-medium">反馈标题</text>
-            <input
-              v-model="formTitle"
-              type="text"
-              class="form-input"
-              :class="{ 'form-input-disabled': isAppealFromAid }"
-              placeholder="标题不能超过25字符噢！"
-              :maxlength="25"
-              :disabled="isAppealFromAid"
-            >
-            <text v-if="isAppealFromAid" class="mt-1 block text-xs text-gray-500">申诉标题不可修改</text>
-            <text class="mt-2 block text-xs text-[#424344] font-bold">请文明理性发言，共同营造良好的网络环境！</text>
-          </view>
-          <!-- 接收小组类型 -->
-          <view class="form-group mb-4">
-            <text class="mb-2 block text-sm text-[#424344] font-medium">接收小组类型</text>
-            <picker
-              :value="orgTypeOptions.findIndex(o => o.value === formOrgType)"
-              :range="orgTypeOptions"
-              range-key="label"
-              class="form-picker"
-              @change="(e: any) => { formOrgType = orgTypeOptions[e.detail.value]?.value ?? '' }"
-            >
-              <view class="form-picker-inner">
-                <text class="form-picker-text ellipsis">{{ formOrgType || '请选择' }}</text>
-                <text class="i-carbon-chevron-down form-picker-arrow" />
-              </view>
-            </picker>
-          </view>
-          <!-- 接收小组 -->
-          <view class="form-group mb-4">
-            <text class="mb-2 block text-sm text-[#424344] font-medium">接收小组</text>
-            <picker
-              :value="orgOptions.findIndex(o => o.value === formOrg)"
-              :range="orgOptions"
-              range-key="label"
-              class="form-picker"
-              @change="(e: any) => { formOrg = orgOptions[e.detail.value]?.value ?? '' }"
-            >
-              <view class="form-picker-inner">
-                <text class="form-picker-text ellipsis">{{ formOrg || '请选择' }}</text>
-                <text class="i-carbon-chevron-down form-picker-arrow" />
-              </view>
-            </picker>
-          </view>
-          <!-- 反馈内容 -->
-          <view class="form-group mb-4">
-            <text class="mb-2 block text-sm text-[#424344] font-medium">反馈内容</text>
-            <textarea
-              v-model="formContent"
-              class="form-textarea form-textarea-large"
-              placeholder="请描述您的问题或建议..."
-              :maxlength="500"
-              show-confirm-bar
-            />
-            <view class="mt-1 text-right text-xs text-gray-400">
-              {{ formContent.length }}/500
-            </view>
-          </view>
-          <!-- 按钮：适配屏宽、禁用默认点击高亮防闪屏 -->
-          <view class="form-buttons">
-            <view
-              class="form-btn form-btn-secondary"
-              :class="{ 'form-btn-disabled': formSubmitting }"
-              hover-class="none"
-              @click="!formSubmitting && submitFeedback(true)"
-            >
-              <text>保存草稿</text>
-            </view>
-            <view
-              class="form-btn form-btn-primary"
-              :class="{ 'form-btn-disabled': formSubmitting }"
-              hover-class="none"
-              @click="!formSubmitting && submitFeedback(false)"
-            >
-              <text>提交反馈</text>
-            </view>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
     <!-- 主界面：与网页版一致的布局 -->
-    <view v-else class="layout-top-spacing">
+    <view class="layout-top-spacing">
       <!-- 左侧欢迎区 -->
       <view class="bio layout-spacing px-4 pt-4">
         <view class="widget-content relative rounded-lg bg-white p-4 shadow-sm">
@@ -537,10 +365,10 @@ onMounted(() => {
               @click="onCardClick(item)"
             >
               <view class="d-flex justify-content mb-2">
-                <view class="flex-1">
+                <view class="min-width-0 flex-1">
                   <view class="flex flex-wrap items-center gap-2">
-                    <text class="text-base text-[var(--text-main)] font-semibold">
-                      {{ cardTitle(item) }}
+                    <text class="line-clamp-1 text-base text-[var(--text-main)] font-semibold">
+                      {{ item.title || cardTitle(item) }}
                     </text>
                     <view
                       class="badge badge-pill rounded-full px-2 py-0.5 text-xs font-medium"
@@ -553,11 +381,11 @@ onMounted(() => {
               </view>
               <view class="flex items-start text-sm text-[#424344]">
                 <text class="i-carbon-share mr-1 mt-0.5 shrink-0 text-base" />
-                <text class="ml-1">反馈至 {{ item.feedback_type_display ?? '—' }}</text>
+                <text class="ml-1">反馈至 {{ item.org_name || '—' }}</text>
               </view>
               <view class="mt-1 flex items-start text-sm text-[#424344]">
                 <text class="i-carbon-notification mr-1 mt-0.5 shrink-0 text-base" />
-                <text class="ml-1">{{ formatDatePublic(item.feedback_time ?? item.modify_time ?? item.time) }}</text>
+                <text class="ml-1">{{ formatDatePublic(item.feedback_time ?? item.modify_time ?? item.time, item.publisher_public) }}</text>
               </view>
               <view class="feedback-content mt-1 flex items-start text-sm text-[#424344]">
                 <text class="i-carbon-email mr-1 mt-0.5 shrink-0 text-base" />
@@ -615,19 +443,70 @@ onMounted(() => {
               <view v-else-if="myDraftList.length === 0" class="py-10 text-center text-sm text-[#424344]">
                 您没有反馈草稿。
               </view>
-              <view v-else class="space-y-3">
-                <view
-                  v-for="item in myDraftList"
-                  :key="item.id"
-                  class="my-feedback-item border border-gray-100 rounded-lg bg-gray-50/50 p-3"
-                  hover-class="none"
-                  @click="onCardClick(item)"
-                >
-                  <view class="flex items-center justify-between">
-                    <text class="line-clamp-1 text-sm text-[var(--text-main)] font-medium">{{ cardTitle(item) }}</text>
-                  </view>
-                  <view class="mt-1 text-xs text-[#424344]">
-                    {{ formatDatePublic(item.modify_time ?? item.time) }}
+              <view v-else class="bio-skill-box">
+                <view class="row px-2 pb-4">
+                  <view
+                    v-for="item in myDraftList"
+                    :key="item.id"
+                    class="col-12 mb-4"
+                  >
+                    <view class="b-skills border border-gray-100 rounded-lg bg-gray-50/50 p-4" hover-class="none" @click="goEditDraft(item)">
+                      <!-- 标题和操作按钮 -->
+                      <view class="mb-2 flex items-start justify-between">
+                        <view class="min-width-0 flex-1 pr-2">
+                          <view class="flex flex-wrap items-center gap-2">
+                            <text class="line-clamp-1 text-base text-[var(--text-main)] font-semibold">
+                              {{ item.title || cardTitle(item) }}
+                            </text>
+                            <view class="badge badge-pill badge-success rounded-full px-2 py-0.5 text-xs font-medium">
+                              草稿
+                            </view>
+                          </view>
+                        </view>
+                        <view class="flex shrink-0 items-center gap-2" role="group">
+                          <!-- 编辑按钮 -->
+                          <view
+                            class="cursor-pointer text-[#1b55e2]"
+                            hover-class="none"
+                            @click.stop="goEditDraft(item)"
+                          >
+                            <text class="i-carbon-edit text-lg" />
+                          </view>
+                          <!-- 删除按钮 -->
+                          <view
+                            class="cursor-pointer text-[#dc3545]"
+                            hover-class="none"
+                            @click.stop="handleDeleteDraft(item, $event)"
+                          >
+                            <text class="i-carbon-trash-can text-lg" />
+                          </view>
+                        </view>
+                      </view>
+
+                      <!-- 反馈类型 -->
+                      <view class="mt-2 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-bookmark mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">{{ item.feedback_type_display || item.type_name || '—' }}</text>
+                      </view>
+
+                      <!-- 反馈至 -->
+                      <view class="mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-share mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">反馈至 {{ item.org_name || '—' }}</text>
+                      </view>
+
+                      <!-- 保存时间 -->
+                      <view class="mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-notification mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">{{ formatDateDraft(item.modify_time ?? item.time) }}</text>
+                      </view>
+
+                      <!-- 内容预览 -->
+                      <view class="feedback-content mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-email mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="line-clamp-2 ml-1 flex-1">{{ item.content || '—' }}</text>
+                      </view>
+                    </view>
                   </view>
                 </view>
               </view>
@@ -640,22 +519,42 @@ onMounted(() => {
               <view v-else-if="myInProgressList.length === 0" class="py-10 text-center text-sm text-[#424344]">
                 您没有在进行中的反馈。
               </view>
-              <view v-else class="space-y-3">
-                <view
-                  v-for="item in myInProgressList"
-                  :key="item.id"
-                  class="my-feedback-item border border-gray-100 rounded-lg bg-gray-50/50 p-3"
-                  hover-class="none"
-                  @click="onCardClick(item)"
-                >
-                  <view class="flex flex-wrap items-center gap-2">
-                    <text class="line-clamp-1 text-sm text-[var(--text-main)] font-medium">{{ cardTitle(item) }}</text>
-                    <view class="badge badge-pill rounded-full px-2 py-0.5 text-xs" :class="solveStatusInfo(item.solve_status).class">
-                      {{ item.solve_status_display ?? solveStatusInfo(item.solve_status).text }}
+              <view v-else class="bio-skill-box">
+                <view class="row px-2 pb-4">
+                  <view
+                    v-for="item in myInProgressList"
+                    :key="item.id"
+                    class="col-12 mb-4"
+                  >
+                    <view class="b-skills border border-gray-100 rounded-lg bg-gray-50/50 p-4" hover-class="none" @click="onCardClick(item)">
+                      <view class="d-flex justify-content mb-2">
+                        <view class="min-width-0 flex-1">
+                          <view class="flex flex-wrap items-center gap-2">
+                            <text class="line-clamp-1 text-base text-[var(--text-main)] font-semibold">
+                              {{ item.title || cardTitle(item) }}
+                            </text>
+                            <view
+                              class="badge badge-pill rounded-full px-2 py-0.5 text-xs font-medium"
+                              :class="solveStatusInfo(item.solve_status).class"
+                            >
+                              {{ item.solve_status_display ?? solveStatusInfo(item.solve_status).text }}
+                            </view>
+                          </view>
+                        </view>
+                      </view>
+                      <view class="flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-share mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">反馈至 {{ item.org_name || '—' }}</text>
+                      </view>
+                      <view class="mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-notification mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">{{ formatDatePublic(item.feedback_time ?? item.modify_time ?? item.time, item.publisher_public) }}</text>
+                      </view>
+                      <view class="feedback-content mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-email mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="line-clamp-2 ml-1 flex-1">{{ item.content || '—' }}</text>
+                      </view>
                     </view>
-                  </view>
-                  <view class="mt-1 text-xs text-[#424344]">
-                    反馈至 {{ item.feedback_type_display ?? '—' }}
                   </view>
                 </view>
               </view>
@@ -668,22 +567,42 @@ onMounted(() => {
               <view v-else-if="myDoneList.length === 0" class="py-10 text-center text-sm text-[#424344]">
                 您没有已完成的反馈。
               </view>
-              <view v-else class="space-y-3">
-                <view
-                  v-for="item in myDoneList"
-                  :key="item.id"
-                  class="my-feedback-item border border-gray-100 rounded-lg bg-gray-50/50 p-3"
-                  hover-class="none"
-                  @click="onCardClick(item)"
-                >
-                  <view class="flex flex-wrap items-center gap-2">
-                    <text class="line-clamp-1 text-sm text-[var(--text-main)] font-medium">{{ cardTitle(item) }}</text>
-                    <view class="badge badge-pill rounded-full px-2 py-0.5 text-xs" :class="solveStatusInfo(item.solve_status).class">
-                      {{ item.solve_status_display ?? solveStatusInfo(item.solve_status).text }}
+              <view v-else class="bio-skill-box">
+                <view class="row px-2 pb-4">
+                  <view
+                    v-for="item in myDoneList"
+                    :key="item.id"
+                    class="col-12 mb-4"
+                  >
+                    <view class="b-skills border border-gray-100 rounded-lg bg-gray-50/50 p-4" hover-class="none" @click="onCardClick(item)">
+                      <view class="d-flex justify-content mb-2">
+                        <view class="min-width-0 flex-1">
+                          <view class="flex flex-wrap items-center gap-2">
+                            <text class="line-clamp-1 text-base text-[var(--text-main)] font-semibold">
+                              {{ item.title || cardTitle(item) }}
+                            </text>
+                            <view
+                              class="badge badge-pill rounded-full px-2 py-0.5 text-xs font-medium"
+                              :class="solveStatusInfo(item.solve_status).class"
+                            >
+                              {{ item.solve_status_display ?? solveStatusInfo(item.solve_status).text }}
+                            </view>
+                          </view>
+                        </view>
+                      </view>
+                      <view class="flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-share mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">反馈至 {{ item.org_name || '—' }}</text>
+                      </view>
+                      <view class="mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-notification mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="ml-1">{{ formatDatePublic(item.feedback_time ?? item.modify_time ?? item.time, item.publisher_public) }}</text>
+                      </view>
+                      <view class="feedback-content mt-1 flex items-start text-sm text-[#424344]">
+                        <text class="i-carbon-email mr-1 mt-0.5 shrink-0 text-base" />
+                        <text class="line-clamp-2 ml-1 flex-1">{{ item.content || '—' }}</text>
+                      </view>
                     </view>
-                  </view>
-                  <view class="mt-1 text-xs text-[#424344]">
-                    反馈至 {{ item.feedback_type_display ?? '—' }}
                   </view>
                 </view>
               </view>
