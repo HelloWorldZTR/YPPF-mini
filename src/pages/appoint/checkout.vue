@@ -122,8 +122,10 @@ const isPeopleValid = computed(() => totalPeople.value >= minPeople.value && tot
 
 // 表单验证
 const canSubmit = computed(() => {
-  if (!formData.Ausage.trim()) return false
-  if (!isPeopleValid.value) return false
+  if (!formData.Ausage.trim())
+    return false
+  if (!isPeopleValid.value)
+    return false
   return true
 })
 
@@ -179,7 +181,7 @@ async function fetchData() {
     console.error(error)
     uni.showToast({
       icon: 'error',
-      title: '加载信息出错',
+      title: '加载失败',
     })
   }
   finally {
@@ -256,7 +258,8 @@ function clearAllMembers() {
 
 // 提交预约
 async function submitAppoint() {
-  if (!canSubmit.value || submitting.value) return
+  if (!canSubmit.value || submitting.value)
+    return
 
   // 验证
   if (!formData.Ausage.trim()) {
@@ -296,34 +299,18 @@ async function submitAppoint() {
 
     const res = await createAppoint(requestData)
 
-    if (res.success) {
-      uni.showToast({
-        icon: 'success',
-        title: isLongterm.value ? '已提交审核' : '预约成功',
-      })
-      // 返回上一页或跳转到我的预约
-      setTimeout(() => {
-        uni.navigateBack({ delta: 2 })
-      }, 1500)
-    }
-    else {
-      uni.showToast({
-        icon: 'none',
-        title: res.message || '预约失败',
-      })
-    }
+    uni.showToast({
+      icon: 'success',
+      title: isLongterm.value ? '已提交审核' : '预约成功',
+    })
+    // 返回上一页或跳转到我的预约
+    setTimeout(() => {
+      uni.navigateBack({ delta: 2 })
+    }, 1500)
   }
   catch (error: any) {
     console.error(error)
-    // 尝试从错误响应中提取消息
-    const errorMsg = error?.data?.times
-        || error?.data?.endid
-        || error?.data?.interval
-        || '提交失败'
-    uni.showToast({
-      icon: 'none',
-      title: errorMsg,
-    })
+    // 如果请求失败，失败的信息由http 包负责显示
   }
   finally {
     submitting.value = false
@@ -331,9 +318,8 @@ async function submitAppoint() {
 }
 
 function goBack() {
-    uni.navigateBack()
+  uni.navigateBack()
 }
-
 </script>
 
 <template>
@@ -344,14 +330,13 @@ function goBack() {
     :placeholder="true"
     left-icon="arrow-left"
     @left-click="goBack"
-  >
-  </uv-navbar>
+  />
   <!-- 加载状态 -->
   <view v-if="loading" class="flex items-center justify-center py-20">
     <uv-loading-icon mode="circle" />
   </view>
 
-  <view v-else-if="data" class="bg-gray-50 pb-safe min-h-screen">
+  <view v-else-if="data" class="min-h-screen bg-gray-50 pb-safe">
     <!-- 房间信息卡片 -->
     <view class="mx-3 mt-3 rounded-lg bg-white p-4 shadow-sm">
       <view class="flex items-start justify-between">
@@ -364,8 +349,8 @@ function goBack() {
           </view>
         </view>
         <view v-if="hasLongtermPermission">
-            <text class="text-gray-500 mr-2">长期预约</text>
-            <wd-switch v-model="isLongterm" size="20px" />
+          <text class="mr-2 text-gray-500">长期预约</text>
+          <wd-switch v-model="isLongterm" size="20px" />
         </view>
       </view>
 
@@ -387,7 +372,9 @@ function goBack() {
     <view v-if="hasInterviewPermission && !isLongterm" class="mx-3 mt-3 rounded-lg bg-white p-4 shadow-sm">
       <view class="flex items-center justify-between">
         <view>
-          <view class="text-base text-gray-800 font-medium">面试预约模式</view>
+          <view class="text-base text-gray-800 font-medium">
+            面试预约模式
+          </view>
           <view class="mt-1 text-xs text-gray-500">
             开启后可为面试候选人预约（最多 {{ interviewMaxCount }} 人）
           </view>
@@ -399,13 +386,19 @@ function goBack() {
     <!-- 长期预约额外字段 -->
     <view v-if="isLongterm" class="mx-3 mt-3 rounded-lg bg-white shadow-sm">
       <view class="border-b border-gray-100 px-4 py-3">
-        <view class="text-base text-gray-800 font-medium">长期预约设置</view>
-        <view class="mt-1 text-xs text-gray-500">设置预约重复周期和次数</view>
+        <view class="text-base text-gray-800 font-medium">
+          长期预约设置
+        </view>
+        <view class="mt-1 text-xs text-gray-500">
+          设置预约重复周期和次数
+        </view>
       </view>
 
       <!-- 间隔周期 -->
       <view class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <view class="text-sm text-gray-700">间隔周期</view>
+        <view class="text-sm text-gray-700">
+          间隔周期
+        </view>
         <view class="flex items-center gap-2">
           <view
             v-for="opt in intervalOptions"
@@ -423,10 +416,12 @@ function goBack() {
 
       <!-- 预约次数 -->
       <view class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <view class="text-sm text-gray-700">预约次数</view>
+        <view class="text-sm text-gray-700">
+          预约次数
+        </view>
         <view class="flex items-center gap-2">
           <view
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100"
+            class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100"
             @click="formData.times > 2 && formData.times--"
           >
             <div class="i-carbon-subtract text-gray-600" />
@@ -435,7 +430,7 @@ function goBack() {
             {{ formData.times }} 次
           </view>
           <view
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100"
+            class="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100"
             @click="formData.times < 16 && formData.times++"
           >
             <div class="i-carbon-add text-gray-600" />
@@ -446,8 +441,12 @@ function goBack() {
       <!-- 开始周次 -->
       <view class="flex items-center justify-between px-4 py-3">
         <view>
-          <view class="text-sm text-gray-700">开始周次</view>
-          <view class="mt-0.5 text-xs text-gray-400">{{ startWeek === 1 ? '从下周开始预约' : '从本周开始预约' }}</view>
+          <view class="text-sm text-gray-700">
+            开始周次
+          </view>
+          <view class="mt-0.5 text-xs text-gray-400">
+            {{ startWeek === 1 ? '从下周开始预约' : '从本周开始预约' }}
+          </view>
         </view>
         <view class="flex items-center gap-2">
           <text class="text-sm" :class="startWeek === 0 ? 'text-blue-600 font-medium' : 'text-gray-400'">本周</text>
@@ -465,7 +464,9 @@ function goBack() {
             预约用途
             <text class="text-red-500">*</text>
           </view>
-          <view class="text-xs text-gray-400">{{ formData.Ausage.length }}/100</view>
+          <view class="text-xs text-gray-400">
+            {{ formData.Ausage.length }}/100
+          </view>
         </view>
         <textarea
           v-model="formData.Ausage"
@@ -480,8 +481,12 @@ function goBack() {
       <!-- 预约通知（可选） -->
       <view class="px-4 py-3">
         <view class="flex items-center justify-between">
-          <view class="text-sm text-gray-700">预约通知</view>
-          <view class="text-xs text-gray-400">选填</view>
+          <view class="text-sm text-gray-700">
+            预约通知
+          </view>
+          <view class="text-xs text-gray-400">
+            选填
+          </view>
         </view>
         <textarea
           v-model="formData.announcement"
@@ -498,7 +503,9 @@ function goBack() {
     <view class="mx-3 mt-3 rounded-lg bg-white shadow-sm">
       <view class="border-b border-gray-100 px-4 py-3">
         <view class="flex items-center justify-between">
-          <view class="text-base text-gray-800 font-medium">预约人数</view>
+          <view class="text-base text-gray-800 font-medium">
+            预约人数
+          </view>
           <view
             class="text-xs"
             :class="isPeopleValid ? 'text-green-600' : 'text-red-500'"
@@ -510,13 +517,19 @@ function goBack() {
 
       <!-- 本院人数（只读，显示已添加成员数+自己） -->
       <view class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <view class="text-sm text-gray-700">本院人数</view>
-        <view class="text-sm text-gray-800 font-medium">{{ ypNum }} 人（含发起人）</view>
+        <view class="text-sm text-gray-700">
+          本院人数
+        </view>
+        <view class="text-sm text-gray-800 font-medium">
+          {{ ypNum }} 人（含发起人）
+        </view>
       </view>
 
       <!-- 外院人数 -->
       <view class="flex items-center justify-between px-4 py-3">
-        <view class="text-sm text-gray-700">外院人数</view>
+        <view class="text-sm text-gray-700">
+          外院人数
+        </view>
         <view class="flex items-center">
           <input
             type="number"
@@ -534,8 +547,12 @@ function goBack() {
     <view class="mx-3 mt-3 rounded-lg bg-white shadow-sm">
       <view class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <view>
-          <view class="text-base text-gray-800 font-medium">添加本院成员</view>
-          <view class="mt-1 text-xs text-gray-500">搜索学号或姓名添加预约参与者</view>
+          <view class="text-base text-gray-800 font-medium">
+            添加本院成员
+          </view>
+          <view class="mt-1 text-xs text-gray-500">
+            搜索学号或姓名添加预约参与者
+          </view>
         </view>
         <!-- 一键添加按钮（长期预约权限用户可见） -->
         <view v-if="hasLongtermPermission && data?.member_ids?.length" class="flex items-center gap-2">
@@ -576,7 +593,7 @@ function goBack() {
         <!-- 搜索加载中 -->
         <view
           v-if="showSearchResults && searchQuery && searchLoading"
-          class="absolute left-4 right-4 top-full z-20 mt-1 rounded-lg border border-gray-200 bg-white px-4 py-4 text-center shadow-lg"
+          class="absolute left-4 right-4 top-full z-20 mt-1 border border-gray-200 rounded-lg bg-white px-4 py-4 text-center shadow-lg"
         >
           <uv-loading-icon mode="circle" size="20" />
           <text class="ml-2 text-sm text-gray-400">搜索中...</text>
@@ -585,7 +602,7 @@ function goBack() {
         <!-- 搜索结果下拉 -->
         <view
           v-else-if="showSearchResults && searchQuery && searchResults.length > 0"
-          class="absolute left-4 right-4 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+          class="absolute left-4 right-4 top-full z-20 mt-1 overflow-hidden border border-gray-200 rounded-lg bg-white shadow-lg"
         >
           <view
             v-for="user in searchResults"
@@ -594,8 +611,12 @@ function goBack() {
             @click="addStudentFromSearch(user)"
           >
             <view class="flex-1">
-              <view class="text-sm text-gray-800 font-medium">{{ user.name }}</view>
-              <view class="mt-0.5 text-xs text-gray-500">{{ user.id }}</view>
+              <view class="text-sm text-gray-800 font-medium">
+                {{ user.name }}
+              </view>
+              <view class="mt-0.5 text-xs text-gray-500">
+                {{ user.id }}
+              </view>
             </view>
             <div class="i-carbon-add-alt text-lg text-blue-500" />
           </view>
@@ -604,7 +625,7 @@ function goBack() {
         <!-- 无搜索结果 -->
         <view
           v-else-if="showSearchResults && searchQuery && !searchLoading && searchResults.length === 0"
-          class="absolute left-4 right-4 top-full z-20 mt-1 rounded-lg border border-gray-200 bg-white px-4 py-6 text-center shadow-lg"
+          class="absolute left-4 right-4 top-full z-20 mt-1 border border-gray-200 rounded-lg bg-white px-4 py-6 text-center shadow-lg"
         >
           <div class="i-carbon-search mx-auto mb-2 text-2xl text-gray-300" />
           <text class="text-sm text-gray-400">未找到匹配的成员</text>
@@ -613,7 +634,9 @@ function goBack() {
 
       <!-- 已添加成员列表 -->
       <view v-if="memberList.length > 0" class="px-4 py-3">
-        <view class="mb-2 text-xs text-gray-500">已添加成员（{{ memberList.length }} 人）</view>
+        <view class="mb-2 text-xs text-gray-500">
+          已添加成员（{{ memberList.length }} 人）
+        </view>
         <view class="flex flex-wrap gap-2">
           <view
             v-for="member in memberList"
@@ -622,7 +645,7 @@ function goBack() {
           >
             <text class="text-sm text-blue-700">{{ member.name }}</text>
             <view
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-200"
+              class="h-5 w-5 flex items-center justify-center rounded-full bg-blue-200"
               @click="removeStudent(member.id)"
             >
               <div class="i-carbon-close text-xs text-blue-600" />
@@ -637,7 +660,7 @@ function goBack() {
     </view>
 
     <!-- 提交按钮区域 -->
-    <view class="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 pb-safe pt-3 shadow-lg">
+    <view class="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 pt-3 shadow-lg pb-safe">
       <!-- 提示信息 -->
       <view v-if="isLongterm" class="mb-2 text-center text-xs text-orange-600">
         长期预约将提交审核，通过后生效

@@ -7,6 +7,47 @@ import { isDoubleTokenMode } from '@/utils'
 import { toLoginPage } from '@/utils/toLoginPage'
 import { ResultEnum } from './tools/enum'
 
+/**
+ * 将接口返回的错误 data 整理成可展示的字符串
+ * 这是为了兼容DRF ValidationError和朴素API实现方式的格式
+ * - 朴素API：若有 msg / message 直接使用；若为数组，用分号拼接
+ * - DRF：若为dict且值为数组，如 {"字段名":["error1"]}，
+ *        按 "key: value" 展开后用分号拼接
+ */
+function formatErrorData(data: any): string {
+  // 默认
+  if (data == null)
+    return '请求错误'
+  // 朴素API
+  if (typeof data.msg === 'string' && data.msg)
+    return data.msg
+  if (typeof data.message === 'string' && data.message)
+    return data.message
+  if (Array.isArray(data)) {
+    const list = data.map(item => (typeof item === 'string' ? item : String(item)))
+    return list.length ? list.join('；') : '请求错误'
+  }
+  // DRF
+  if (typeof data === 'object') {
+    const parts: string[] = []
+    for (const value of Object.values(data)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const text = typeof item === 'string' ? item : String(item)
+          if (text)
+            parts.push(text)
+        }
+      }
+      else if (value != null && value !== '') {
+        parts.push(String(value))
+      }
+    }
+    return parts.length ? parts.join('；') : '请求错误'
+  }
+  // 其他情况
+  return '请求错误'
+}
+
 // 刷新 token 状态管理
 let refreshing = false // 防止重复刷新 token 标识
 let taskQueue: (() => void)[] = [] // 刷新 token 请求队列
@@ -125,12 +166,13 @@ export function http<T>(options: CustomRequestOptions) {
           return resolve(responseData.data)
         }
 
-        // 处理其他错误
-        !options.hideErrorToast
-        && uni.showToast({
-          icon: 'none',
-          title: (res.data as any).msg || '请求错误',
-        })
+        // 处理其他错误（401以外的）
+        if (!options.hideErrorToast) {
+          uni.showToast({
+            icon: 'none',
+            title: formatErrorData(res.data),
+          })
+        }
         reject(res)
       },
       // 响应失败
