@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import type { IActivityHomepage, IActivitySummary } from '@/api/types/activity'
 import type { ICarouselItem } from '@/api/types/carousel'
 import { onMounted, ref } from 'vue'
+import { getActivityOverview } from '@/api/activity'
 import { getCarouselList } from '@/api/carousel'
 import { everydaySignIn } from '@/api/login'
+import ActivityCard from '@/components/ActivityCard.vue'
 import { toBackendURL } from '@/utils'
 
 defineOptions({
@@ -21,6 +24,44 @@ definePage({
 const notifyRef = ref()
 const carouselList = ref<ICarouselItem[]>([])
 const carouselLoading = ref(true)
+
+// 活动数据
+const activityOverview = ref<IActivityHomepage | null>(null)
+const activityLoading = ref(false)
+const activityTab = ref(0)
+const activityTabs = [
+  { name: '近期活动', key: 'recent' },
+  { name: '今日活动', key: 'today' },
+  { name: '最新发布', key: 'new' },
+]
+
+const currentActivities = ref<IActivitySummary[]>([])
+
+// 根据 key 更新当前活动列表
+function updateCurrentActivities(key: string) {
+  const overview = activityOverview.value
+  if (!overview) {
+    currentActivities.value = []
+    return
+  }
+
+  if (key === 'today') {
+    currentActivities.value = overview.today_activities?.map(item => item.activity) || []
+  }
+  else if (key === 'new') {
+    currentActivities.value = overview.newly_released_activities || []
+  }
+  else {
+    // 默认：近期活动
+    currentActivities.value = overview.recent_activities || []
+  }
+}
+
+function onActivityTabChange(params: any) {
+  activityTab.value = params.index
+  const key = activityTabs[params.index]?.key ?? 'recent'
+  updateCurrentActivities(key)
+}
 
 // 计算 navbar 高度（44px + 状态栏高度）
 function getNavbarHeight() {
@@ -62,6 +103,7 @@ onMounted(async () => {
   catch (error) {
     console.error('每日签到失败:', error)
   }
+
   try {
     carouselLoading.value = true
     const res = await getCarouselList()
@@ -76,11 +118,29 @@ onMounted(async () => {
   finally {
     carouselLoading.value = false
   }
+
+  // 加载活动首页数据
+  try {
+    activityLoading.value = true
+    activityOverview.value = await getActivityOverview()
+    // 初始化当前活动列表（默认显示近期活动）
+    updateCurrentActivities('recent')
+  }
+  catch (error) {
+    console.error('活动数据获取失败:', error)
+  }
+  finally {
+    activityLoading.value = false
+  }
 })
+
+function onActivityCardClick(id: number) {
+  uni.navigateTo({ url: `/pages/generic/webview?uri=/viewActivity/${id}` })
+}
 </script>
 
 <template>
-  <uv-navbar title="首页" placeholder="true" left-icon="" />
+  <uv-navbar title="首页" :placeholder="true" left-icon="" />
   <uv-notify ref="notifyRef" />
   <view class="bg-white px-4 pt-safe">
     <uv-swiper
@@ -95,4 +155,51 @@ onMounted(async () => {
       @click="onCarouselClick"
     />
   </view>
+
+  <!-- 活动列表：使用 uv-tabs 切换不同分组 -->
+  <view class="px-4 pb-safe">
+    <view class="mt-4">
+      <uv-tabs
+        :list="activityTabs"
+        :scrollable="false"
+        @change="onActivityTabChange"
+      />
+    </view>
+
+    <view v-if="activityLoading" class="flex items-center justify-center py-6 text-xs text-gray-400">
+      加载活动中…
+    </view>
+    <view v-else>
+      <view v-if="currentActivities.length === 0" class="flex items-center justify-center py-6 text-xs text-gray-400">
+        暂无活动
+      </view>
+      <view v-else class="mt-3">
+        <ActivityCard
+          v-for="item in currentActivities"
+          :key="item.id"
+          :activity="item"
+          :show-quota="true"
+          :show-time="activityTabs[activityTab].key === 'today'"
+          @click="onActivityCardClick(item.id)"
+        />
+      </view>
+    </view>
+
+    <!-- 即将截止报名的活动单独展示
+    <view v-if="activityOverview?.signup_activities?.length" class="mt-6">
+      <view class="mb-2 text-sm font-medium text-gray-800">
+        即将截止报名
+      </view>
+      <ActivityCard
+        v-for="item in activityOverview.signup_activities"
+        :key="item.activity.id"
+        :activity="item.activity"
+        :show-quota="true"
+        :show-time="true"
+      />
+    </view> -->
+  </view>
 </template>
+
+<style lang="scss" scoped>
+</style>
