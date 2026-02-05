@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { getTicket } from '@/api/login'
-import { useTokenStore } from '@/store/token'
 import { toBackendURL } from '@/utils'
 
 definePage({
@@ -8,16 +7,22 @@ definePage({
   },
 })
 
-/* Example: https://yppf.yuanpei.pku.edu.cn/redirect?token=123456&to=https://yppf.yuanpei.pku.edu.cn/xxx */
+/* 对于不需要登录的页面isPublic=true，不需要换ticket，直接访问即可 */
 const uri = ref('/')
 const ticket = ref('')
-const url = computed(() => `${toBackendURL('/redirect')}?ticket=${ticket.value}&to=${toBackendURL(uri.value)}`)
-
-const tokenStore = useTokenStore()
+const isPublic = ref(false)
+const url = computed(() => {
+  if (isPublic.value)
+    return toBackendURL(uri.value)
+  return `${toBackendURL('/redirect')}?ticket=${ticket.value}&to=${encodeURIComponent(toBackendURL(uri.value))}`
+})
 
 onLoad((options) => {
-  uri.value = options.uri || '/'
-  /* 用jwt token获取一次性的ticket */
+  uri.value = decodeURIComponent(options.uri || '/')
+  isPublic.value = options.public === '1' || options.public === 'true'
+
+  if (isPublic.value)
+    return
   getTicket().then((res) => {
     ticket.value = res.ticket
   }).catch((err) => {

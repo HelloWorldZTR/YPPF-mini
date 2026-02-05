@@ -8,6 +8,7 @@ import {
   login as _login,
   refreshToken as _refreshToken,
   wxLogin as _wxLogin,
+  wxUnbind as _wxUnbind,
   getWxCode,
 } from '@/api/login'
 import { isDoubleTokenRes, isSingleTokenRes } from '@/api/types/login'
@@ -100,7 +101,8 @@ export const useTokenStore = defineStore(
     })
 
     /**
-     * 登录成功后处理逻辑
+     * 登录成功后处理逻辑，设置token和username
+     * username可以是该wxcode绑定的主账户，或者这个主账号管理的小组账号
      * @param tokenInfo 登录返回的token信息
      */
     async function _postLogin(tokenInfo: IWxLoginRes) {
@@ -148,10 +150,10 @@ export const useTokenStore = defineStore(
     }
 
     /**
-     * 微信登录
-     * 有的时候后端会用一个接口返回token和用户信息，有的时候会分开2个接口，一个获取token，一个获取用户信息
-     * （各有利弊，看业务场景和系统复杂度），这里使用2个接口返回的来模拟
-     * @returns 登录结果
+     * 微信登录，如果wxcode没有绑定，则绑定，同时返回一个res，防止http 401尝试重新登录的时候死锁
+     * 如果wxcode已绑定，则储存username，因为一个账号可以登录主账号和其管理的小组账号，所以需要
+     * username来判断当前登录的是哪一个，后续token过期了刷新的时候，还需要这个username来续期
+     * @returns 登录结果，如果status=unbound则是没绑定
      */
     const wxLogin = async (username?: string) => {
       try {
@@ -173,11 +175,11 @@ export const useTokenStore = defineStore(
           uni.navigateTo({
             url: `${BIND_PAGE}?signed_openid=${encodeURIComponent(res.signed_openid)}`,
           })
-          return
+          return res
         }
-        console.log('微信登录-token: ', res)
         // 如果成功，储存token和用户名
         await _postLogin(res)
+        console.log('微信登录-res: ', res)
         console.log('成功登录，token已刷新')
         return res
       }
@@ -200,6 +202,9 @@ export const useTokenStore = defineStore(
     const logout = async () => {
       try {
         // 单token，直接清除前端信息即可
+        // 主要是删除username
+        const userStore = useUserStore()
+        userStore.clearUserInfo()
         // 双token模式下，建议调用后端登出接口，清理服务端refreshToken
         // await _logout()
       }
@@ -213,11 +218,28 @@ export const useTokenStore = defineStore(
         // 清除存储的过期时间
         uni.removeStorageSync('accessTokenExpireTime')
         uni.removeStorageSync('refreshTokenExpireTime')
-        console.log('退出登录-清除用户信息')
         tokenInfo.value = { ...tokenInfoState }
         uni.removeStorageSync('token')
-        const userStore = useUserStore()
-        userStore.clearUserInfo()
+      }
+    }
+
+    /**
+     * 解除绑定并且退出登录
+     */
+    const unbind = async () => {
+      try {
+        await _wxUnbind()
+        await logout()
+      }
+      catch (error) {
+        console.error('解除绑定失败:', error)
+        uni.showToast({
+          title: '解除绑定失败',
+          icon: 'error',
+        })
+      }
+      finally {
+        updateNowTime()
       }
     }
 
@@ -320,6 +342,7 @@ export const useTokenStore = defineStore(
       login,
       wxLogin,
       logout,
+      unbind,
 
       // 认证状态判断（最常用的）
       hasLogin: hasValidLogin,

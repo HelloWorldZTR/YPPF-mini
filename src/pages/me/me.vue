@@ -19,7 +19,6 @@ definePage({
 
 const userStore = useUserStore()
 const tokenStore = useTokenStore()
-// 使用storeToRefs解构userInfo
 const { userInfo } = storeToRefs(userStore)
 
 // 默认头像
@@ -38,41 +37,19 @@ async function handleLogin() {
   // #endif
 }
 
-function _unbind() {
-  throw new Error('Not implemented.')
-}
-
 function handleUnbind() {
   uni.showModal({
     title: '提示',
     content: '确定要解除绑定吗？',
     success: (res) => {
       if (res.confirm) {
-        // 清空用户信息
-        tokenStore.logout()
-
-        try {
-          _unbind()
-          uni.showToast({
-            title: '已解除绑定',
-            icon: 'success',
-          })
-        }
-        catch (error) {
-          uni.showToast({
-            title: '解除绑定功能开发中，敬请期待~',
-            icon: 'error',
-          })
-        }
+        tokenStore.unbind()
+        uni.showToast({
+          title: '已解除绑定',
+          icon: 'success',
+        })
       }
     },
-  })
-}
-
-function handleNothing() {
-  uni.showToast({
-    title: '功能开发中，敬请期待~',
-    icon: 'none',
   })
 }
 

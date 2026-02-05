@@ -71,6 +71,13 @@ export function wxBind(bindForm: IWxBindForm) {
 }
 
 /**
+ * 微信账号解除绑定
+ */
+export function wxUnbind() {
+  return http.post<null>('/api/v2/auth/wx/unbind/')
+}
+
+/**
  * 刷新token
  * @param refreshToken 刷新token
  * @warns 该接口仅在双token模式下可用
