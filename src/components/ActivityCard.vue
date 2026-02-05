@@ -74,7 +74,7 @@ const getStatusClass = computed(() => {
 
 <template>
   <view
-    class="activity-card mb-4 overflow-hidden border border-gray-100 rounded-2xl bg-white transition-all shadow-md active:opacity-80"
+    class="activity-card mb-4 overflow-hidden border border-gray-100 rounded-2xl bg-white transition-all shadow-sm active:opacity-80"
     @click="handleClick"
   >
     <view class="p-4">

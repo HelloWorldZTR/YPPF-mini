@@ -79,10 +79,10 @@ function getColorByIndex(index: number) {
 <template>
   <view v-if="customTabbarEnable" class="h-50px pb-safe">
     <view class="border-and-fixed bg-white" @touchmove.stop.prevent>
-      <view class="h-50px flex items-center">
+      <view class="h-60px flex items-center">
         <view
           v-for="(item, index) in tabbarList" :key="index"
-          class="flex flex-1 flex-col items-center justify-center"
+          class="flex flex-1 flex-col items-center justify-center pt-5px"
           :style="{ color: getColorByIndex(index) }"
           @click="handleClick(index)"
         >
