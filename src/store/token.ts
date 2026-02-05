@@ -114,6 +114,7 @@ export const useTokenStore = defineStore(
       setTokenInfo(tokenData)
       // 设置用户名，以供后续请求使用
       const userStore = useUserStore()
+      userStore.userInfo.account_id = tokenInfo.account_id!
       userStore.userInfo.username = tokenInfo.username!
       userStore.userInfo.name = tokenInfo.name!
     }

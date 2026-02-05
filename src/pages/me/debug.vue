@@ -35,6 +35,12 @@ function handleNavigateToWebview() {
       <view class="mb-4">
         <text>Token Status: {{ tokenStore.updateNowTime().validToken ? '有效' : '无效' }}</text>
       </view>
+      <view class="mb-4">
+        <text>account_id: {{ userStore.userInfo.account_id }}</text>
+      </view>
+      <view class="mb-4">
+        <text>username: {{ userStore.userInfo.username }}</text>
+      </view>
       <button
         class="rounded bg-red-500 px-4 py-2 text-white"
         @click="tokenStore.logout()"
