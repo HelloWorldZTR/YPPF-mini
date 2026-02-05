@@ -1,345 +1,74 @@
 <script lang="ts" setup>
-import type { Feedback, FeedbackCreate, FeedbackType, PatchedFeedbackUpdate } from '@/api/types/feedback'
-import { nextTick, watch } from 'vue'
+import type { Feedback, FeedbackCreate, FeedbackType, OrganizationInfoResponse, PatchedFeedbackUpdate } from '@/api/types/feedback'
+import { nextTick, onMounted, watch } from 'vue'
 import {
   createFeedback,
   getFeedback,
   getFeedbackTypes,
+  getOrganizationInfo,
   partialUpdateFeedback,
 } from '@/api/feedback'
 
-interface Props {
-  /** 编辑的草稿数据，如果提供则进入编辑模式 */
-  draft?: Feedback | null
-}
-
-interface Emits {
-  (e: 'close'): void
-  (e: 'success', data: { isDraft: boolean, feedback: Feedback }): void
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  draft: null,
+definePage({
+  style: {
+    navigationBarTitleText: '写反馈',
+    navigationBarBackgroundColor: '#1b55e2',
+    navigationBarTextStyle: 'white',
+  },
 })
 
-const emit = defineEmits<Emits>()
+// 从路由参数获取草稿ID（编辑模式）
+const draftId = ref<string>('')
+const isEditMode = computed(() => !!draftId.value)
 
 // 表单状态
 const formTypeId = ref<string | number>('')
 const formTitle = ref('')
 const formContent = ref('')
-const formPublisherPublic = ref(true) // 是否公开，默认公开
+const formPublisherPublic = ref(true)
 const formSubmitting = ref(false)
-const formOrgType = ref('学生会')
-const formOrg = ref('内联权益部')
+const formOrgType = ref('')
+const formOrg = ref('')
 
 // 反馈类型
 const feedbackTypes = ref<FeedbackType[]>([])
 
-// 反馈类型选项（与网页一致，接口无数据时使用）
-const FEEDBACK_TYPE_OPTIONS: FeedbackType[] = [
-  { id: '35楼生活权益反馈', name: '35楼生活权益反馈' },
-  { id: '地下室预约问题反馈', name: '地下室预约问题反馈' },
-  { id: '智慧书院系统反馈', name: '智慧书院系统反馈' },
-  { id: '团校反馈', name: '团校反馈' },
-  { id: '学生会工作反馈', name: '学生会工作反馈' },
-  { id: '通识课反馈', name: '通识课反馈' },
-  { id: '学术问题/培养方案反馈', name: '学术问题/培养方案反馈' },
-  { id: '书院课程反馈', name: '书院课程反馈' },
-  { id: '校内权益问题反馈', name: '校内权益问题反馈' },
-  { id: '其他反馈', name: '其他反馈' },
-]
+// 组织信息（从后端加载）
+const organizationInfo = ref<OrganizationInfoResponse | null>(null)
+const orgTypeOptions = computed(() => {
+  if (!organizationInfo.value)
+    return []
+  return organizationInfo.value.org_types.map(ot => ({
+    value: ot.otype_name,
+    label: ot.otype_name,
+  }))
+})
 
-// 接收小组类型（与网页一致）
-const orgTypeOptions = [
-  { value: '书院俱乐部', label: '书院俱乐部' },
-  { value: '书院课程', label: '书院课程' },
-  { value: '体育队', label: '体育队' },
-  { value: '元培学院', label: '元培学院' },
-  { value: '团委', label: '团委' },
-  { value: '学学学委员会', label: '学学学委员会' },
-  { value: '学学学学会', label: '学学学学会' },
-  { value: '学生会', label: '学生会' },
-  { value: '学生小组', label: '学生小组' },
-]
+// 接收小组（按类型联动，从后端数据构建）
+const orgByType = computed(() => {
+  if (!organizationInfo.value)
+    return {}
+  const result: Record<string, { value: string, label: string }[]> = {}
+  // 使用后端返回的 org_type_to_orgs 映射
+  Object.keys(organizationInfo.value.org_type_to_orgs).forEach((orgTypeName) => {
+    const orgNames = organizationInfo.value!.org_type_to_orgs[orgTypeName]
+    result[orgTypeName] = orgNames.map(name => ({ value: name, label: name }))
+  })
+  return result
+})
 
-// 接收小组（按类型联动，与网页一致，完整列表）
-const orgByType: Record<string, { value: string, label: string }[]> = {
-  书院俱乐部: [
-    { value: '元培地下电影院', label: '元培地下电影院' },
-    { value: '学生设计组', label: '学生设计组' },
-    { value: '何善衡图书室', label: '何善衡图书室' },
-    { value: '元培音音音', label: '元培音音音' },
-    { value: '元培吃吃吃', label: '元培吃吃吃' },
-    { value: '智慧书院项目组', label: '智慧书院项目组' },
-    { value: '元培拍拍拍', label: '元培拍拍拍' },
-    { value: '书院健身俱乐部', label: '书院健身俱乐部' },
-    { value: '35楼的住宿辅导员们', label: '35楼的住宿辅导员们' },
-    { value: '元培桌桌桌', label: '元培桌桌桌' },
-    { value: '元气咖啡厅', label: '元气咖啡厅' },
-    { value: '元气人生编辑部', label: '元气人生编辑部' },
-    { value: '元声室内合唱团YACC', label: '元声室内合唱团YACC' },
-    { value: '党员先锋服务队', label: '党员先锋服务队' },
-    { value: '元培排球', label: '元培排球' },
-    { value: '元培辩论队', label: '元培辩论队' },
-  ],
-  书院课程: [
-    { value: '书院粤语班', label: '书院粤语班' },
-    { value: '书院摄影课（基础）', label: '书院摄影课（基础）' },
-    { value: '35元设计实验室', label: '35元设计实验室' },
-    { value: '舞蹈课—女团舞', label: '舞蹈课—女团舞' },
-    { value: '探索"关系"', label: '探索"关系"' },
-    { value: '元行传薪', label: '元行传薪' },
-    { value: '红色溯源系列课程', label: '红色溯源系列课程' },
-    { value: '红色溯源系列课程之党史学习', label: '红色溯源系列课程之党史学习' },
-    { value: '红色溯源系列课程之经典研读', label: '红色溯源系列课程之经典研读' },
-    { value: '元智乐弈', label: '元智乐弈' },
-    { value: '职业素养提升', label: '职业素养提升' },
-    { value: '国际品牌传播', label: '国际品牌传播' },
-    { value: '学业与人生', label: '学业与人生' },
-    { value: '读书会', label: '读书会' },
-    { value: '129合唱', label: '129合唱' },
-    { value: '辩论思维与公共表达', label: '辩论思维与公共表达' },
-    { value: '中国手语入门', label: '中国手语入门' },
-    { value: '《大教堂与集市》读书会', label: '《大教堂与集市》读书会' },
-    { value: '慢投垒球', label: '慢投垒球' },
-    { value: '书院羽毛球课', label: '书院羽毛球课' },
-    { value: '书院排球课', label: '书院排球课' },
-    { value: '定向运动兴趣课', label: '定向运动兴趣课' },
-    { value: '书院健身课', label: '书院健身课' },
-    { value: '"元培跑跑跑"跑团', label: '"元培跑跑跑"跑团' },
-    { value: '书院篮球课', label: '书院篮球课' },
-    { value: '燃脂塑形课', label: '燃脂塑形课' },
-    { value: '书院乒乓球课', label: '书院乒乓球课' },
-    { value: '书法基础实践与艺术鉴赏', label: '书法基础实践与艺术鉴赏' },
-    { value: '篆刻基础实践与艺术鉴赏', label: '篆刻基础实践与艺术鉴赏' },
-    { value: '古琴工作坊', label: '古琴工作坊' },
-    { value: '国画基础实践与艺术鉴赏', label: '国画基础实践与艺术鉴赏' },
-    { value: '绘画班', label: '绘画班' },
-    { value: '手工课', label: '手工课' },
-    { value: '生活技能课', label: '生活技能课' },
-    { value: '极客创意动手实践课', label: '极客创意动手实践课' },
-    { value: '"元plus"技能培训讲座', label: '"元plus"技能培训讲座' },
-    { value: '元行力行', label: '元行力行' },
-    { value: '戏剧课', label: '戏剧课' },
-    { value: '中国艺术歌曲演唱与演奏', label: '中国艺术歌曲演唱与演奏' },
-    { value: '大讲堂音乐课堂—轻松歌唱', label: '大讲堂音乐课堂—轻松歌唱' },
-    { value: '扬琴工作坊', label: '扬琴工作坊' },
-    { value: '城市生物多样性调查保护：从燕园开始', label: '城市生物多样性调查保护：从燕园开始' },
-    { value: '航模制作与前庭功能提高', label: '航模制作与前庭功能提高' },
-    { value: '无人机制作', label: '无人机制作' },
-    { value: '影视制作', label: '影视制作' },
-    { value: '我的家乡', label: '我的家乡' },
-    { value: '网球课', label: '网球课' },
-    { value: '书院台球课', label: '书院台球课' },
-    { value: '足球课', label: '足球课' },
-    { value: '标准日语', label: '标准日语' },
-    { value: '学业规划课', label: '学业规划课' },
-    { value: '健身基础班（男）', label: '健身基础班（男）' },
-    { value: '健身提高班（男）', label: '健身提高班（男）' },
-    { value: '健身基础班（女）', label: '健身基础班（女）' },
-    { value: '健身提高班', label: '健身提高班' },
-    { value: '篮球男生班', label: '篮球男生班' },
-    { value: '篮球女生班', label: '篮球女生班' },
-    { value: '书院台球课2班', label: '书院台球课2班' },
-    { value: '棒垒', label: '棒垒' },
-    { value: '网球', label: '网球' },
-    { value: '足球', label: '足球' },
-    { value: '从零制作无人机', label: '从零制作无人机' },
-    { value: '羽毛球', label: '羽毛球' },
-    { value: '排球', label: '排球' },
-    { value: '大讲堂音乐课堂-轻松歌唱', label: '大讲堂音乐课堂-轻松歌唱' },
-    { value: '元气咖咖咖——咖啡知识、冲调与品鉴', label: '元气咖咖咖——咖啡知识、冲调与品鉴' },
-    { value: '北京的交通与城市探索', label: '北京的交通与城市探索' },
-    { value: '航模制作与前庭功能提高课', label: '航模制作与前庭功能提高课' },
-    { value: '台球', label: '台球' },
-    { value: '舞蹈课-女团舞', label: '舞蹈课-女团舞' },
-    { value: '红色溯源系列课程之实践探索', label: '红色溯源系列课程之实践探索' },
-    { value: '粤语课', label: '粤语课' },
-    { value: '乒乓球', label: '乒乓球' },
-    { value: '岩之言：认识矿物与化石', label: '岩之言：认识矿物与化石' },
-    { value: '编织基础', label: '编织基础' },
-    { value: '劳动生活技能课', label: '劳动生活技能课' },
-    { value: '北京历史地理文化导读', label: '北京历史地理文化导读' },
-    { value: '动漫绘画实践', label: '动漫绘画实践' },
-    { value: '元桌会友', label: '元桌会友' },
-    { value: '公共表达与实用沟通', label: '公共表达与实用沟通' },
-    { value: '品牌运营实操分享', label: '品牌运营实操分享' },
-    { value: '从红色燕园到寰宇形势', label: '从红色燕园到寰宇形势' },
-    { value: '爱乐传习', label: '爱乐传习' },
-    { value: '成长探索', label: '成长探索' },
-    { value: '读书会（社科）', label: '读书会（社科）' },
-    { value: '篮球课（女）', label: '篮球课（女）' },
-    { value: '篮球基础班（男）', label: '篮球基础班（男）' },
-    { value: '篮球提高班（男）', label: '篮球提高班（男）' },
-    { value: '创新空间设计', label: '创新空间设计' },
-    { value: '历史城市与文化遗产', label: '历史城市与文化遗产' },
-    { value: '法国新浪潮电影的源与流', label: '法国新浪潮电影的源与流' },
-    { value: '纪录片大师课', label: '纪录片大师课' },
-    { value: '23秋辩论思维与公共表达', label: '23秋辩论思维与公共表达' },
-    { value: '留学生汉语写作', label: '留学生汉语写作' },
-    { value: '探索成长', label: '探索成长' },
-    { value: '北京历史地理与红色文化', label: '北京历史地理与红色文化' },
-    { value: '中国传统文化初探与德育教育实践', label: '中国传统文化初探与德育教育实践' },
-    { value: '漫步人生', label: '漫步人生' },
-    { value: '3D打印-建模与实践', label: '3D打印-建模与实践' },
-    { value: '劳动类课程', label: '劳动类课程' },
-    { value: '互联网产品创新设计', label: '互联网产品创新设计' },
-    { value: '舞蹈美育系列课程', label: '舞蹈美育系列课程' },
-    { value: '生活实践课', label: '生活实践课' },
-    { value: '导演创作基本原理与技能', label: '导演创作基本原理与技能' },
-    { value: '即兴的魅力', label: '即兴的魅力' },
-    { value: '神奇动物在哪里？古代近东神怪信仰与图像', label: '神奇动物在哪里？古代近东神怪信仰与图像' },
-    { value: '书院实践之旅', label: '书院实践之旅' },
-    { value: 'PPE读书会（《史记》）', label: 'PPE读书会（《史记》）' },
-    { value: '阅读与汇报', label: '阅读与汇报' },
-    { value: '心晴读书会', label: '心晴读书会' },
-    { value: '校园风景速写', label: '校园风景速写' },
-    { value: 'PPE读书会', label: 'PPE读书会' },
-    { value: '昆曲课', label: '昆曲课' },
-    { value: '视觉艺术自由表达', label: '视觉艺术自由表达' },
-    { value: '航模制造入门', label: '航模制造入门' },
-    { value: '古典舞', label: '古典舞' },
-    { value: '书院辩论课', label: '书院辩论课' },
-    { value: '颗粒艺术', label: '颗粒艺术' },
-    { value: '从零开始：健身训练与营养指南', label: '从零开始：健身训练与营养指南' },
-    { value: '西装与美妆-西装搭配与化妆知识导论', label: '西装与美妆-西装搭配与化妆知识导论' },
-    { value: '飞盘书院课', label: '飞盘书院课' },
-    { value: '西装与美妆-绅装搭配与化妆知识导论', label: '西装与美妆-绅装搭配与化妆知识导论' },
-    { value: '心引力', label: '心引力' },
-    { value: '辩论方法与实践', label: '辩论方法与实践' },
-    { value: '古琴艺术与演奏实践', label: '古琴艺术与演奏实践' },
-    { value: '味来实验室', label: '味来实验室' },
-  ],
-  体育队: [
-    { value: '元培男篮', label: '元培男篮' },
-    { value: '元培女篮', label: '元培女篮' },
-    { value: '元培男足', label: '元培男足' },
-    { value: '元培女足', label: '元培女足' },
-    { value: '元培男排', label: '元培男排' },
-    { value: '元培女排', label: '元培女排' },
-    { value: '元培网球队', label: '元培网球队' },
-    { value: '元培羽毛球队', label: '元培羽毛球队' },
-    { value: '元培台球队', label: '元培台球队' },
-    { value: '元培乒乓球队', label: '元培乒乓球队' },
-    { value: '元培慢垒', label: '元培慢垒' },
-    { value: '元培飞盘队', label: '元培飞盘队' },
-  ],
-  元培学院: [
-    { value: '元培学院', label: '元培学院' },
-    { value: '元气值中心', label: '元气值中心' },
-    { value: '元培书院', label: '元培书院' },
-    { value: '物业中心', label: '物业中心' },
-  ],
-  团委: [
-    { value: '元培团委', label: '元培团委' },
-    { value: '组织部', label: '组织部' },
-    { value: '团校秘书处', label: '团校秘书处' },
-    { value: '综合办公室', label: '综合办公室' },
-    { value: '团委宣传部', label: '团委宣传部' },
-    { value: '青年志愿者协会', label: '青年志愿者协会' },
-    { value: '社会实践与学生团体部', label: '社会实践与学生团体部' },
-    { value: '信息化部', label: '信息化部' },
-    { value: '元培学院学生新闻中心', label: '元培学院学生新闻中心' },
-    { value: '飞', label: '飞' },
-  ],
-  学学学委员会: [
-    { value: '三学主席团', label: '三学主席团' },
-    { value: '三学宣传部', label: '三学宣传部' },
-    { value: '秘书处', label: '秘书处' },
-    { value: '科研部', label: '科研部' },
-    { value: '学术规划部', label: '学术规划部' },
-  ],
-  学学学学会: [
-    { value: '信息数据智能学会', label: '信息数据智能学会' },
-    { value: '政经哲学会', label: '政经哲学会' },
-    { value: '经管学会', label: '经管学会' },
-    { value: '物理学会', label: '物理学会' },
-    { value: '数学学会', label: '数学学会' },
-    { value: '整科学会', label: '整科学会' },
-    { value: '法学学会', label: '法学学会' },
-    { value: '生化学会', label: '生化学会' },
-    { value: '社科学会', label: '社科学会' },
-    { value: '人文学会', label: '人文学会' },
-  ],
-  学生会: [
-    { value: '学生会主席团', label: '学生会主席团' },
-    { value: '文娱生活部', label: '文娱生活部' },
-    { value: '体育竞技部', label: '体育竞技部' },
-    { value: '实践交流部', label: '实践交流部' },
-    { value: '内联权益部', label: '内联权益部' },
-    { value: '对外联络部', label: '对外联络部' },
-    { value: '文宣策划部', label: '文宣策划部' },
-    { value: '常代表', label: '常代表' },
-  ],
-  学生小组: [
-    { value: '3楼最西', label: '3楼最西' },
-    { value: '35楼的旅行者们', label: '35楼的旅行者们' },
-    { value: '35.4', label: '35.4' },
-    { value: '35楼三层324-336寝室', label: '35楼三层324-336寝室' },
-    { value: 'DAI论文研讨小组', label: 'DAI论文研讨小组' },
-    { value: '35楼红楼梦研究社', label: '35楼红楼梦研究社' },
-    { value: 'A-SOUL同好会', label: 'A-SOUL同好会' },
-    { value: '元气戏精团', label: '元气戏精团' },
-    { value: '艾欧泽亚冒险者', label: '艾欧泽亚冒险者' },
-    { value: 'Paradox Universalis', label: 'Paradox Universalis' },
-    { value: '元培TRPG', label: '元培TRPG' },
-    { value: '元培反卷卷', label: '元培反卷卷' },
-    { value: '35楼的侦探?', label: '35楼的侦探?' },
-    { value: '元培虚构作品与艺术语言小组', label: '元培虚构作品与艺术语言小组' },
-    { value: '元培球球球', label: '元培球球球' },
-    { value: '古典之声', label: '古典之声' },
-    { value: '35楼一层西', label: '35楼一层西' },
-    { value: '元气化(饮)学(料)实验室', label: '元气化(饮)学(料)实验室' },
-    { value: '后近代非现实平面运动影像文化学术研究中心', label: '后近代非现实平面运动影像文化学术研究中心' },
-    { value: '元培茶茶茶', label: '元培茶茶茶' },
-    { value: '元培观观观', label: '元培观观观' },
-    { value: '自学乐器（Just Play！）小组', label: '自学乐器（Just Play！）小组' },
-    { value: '35楼的捍卫者们', label: '35楼的捍卫者们' },
-    { value: '元培推理系游戏爱好者小组', label: '元培推理系游戏爱好者小组' },
-    { value: '三道口研究院', label: '三道口研究院' },
-    { value: '元培画画画儿', label: '元培画画画儿' },
-    { value: '鹤鸣诗社', label: '鹤鸣诗社' },
-    { value: '元培吨吨吨', label: '元培吨吨吨' },
-    { value: '元培柚子世界品鉴社', label: '元培柚子世界品鉴社' },
-    { value: 'Geist', label: 'Geist' },
-    { value: '德法pre', label: '德法pre' },
-    { value: 'ypc_Minecraft!', label: 'ypc_Minecraft!' },
-    { value: '元培驻罗德岛博士点', label: '元培驻罗德岛博士点' },
-    { value: ' YP 20 fourever', label: ' YP 20 fourever' },
-    { value: '2020级2班', label: '2020级2班' },
-    { value: '德法pre 🙏', label: '德法pre 🙏' },
-    { value: '贰通乐园', label: '贰通乐园' },
-    { value: 'MUUUUUU~SICAL', label: 'MUUUUUU~SICAL' },
-    { value: '不严肃论文讨论会', label: '不严肃论文讨论会' },
-    { value: '23秋民法总论第30组', label: '23秋民法总论第30组' },
-    { value: '民法总论第27讨论组', label: '民法总论第27讨论组' },
-    { value: 'Bonjour', label: 'Bonjour' },
-    { value: 'RusPintos项目组', label: 'RusPintos项目组' },
-    { value: 'TriRoll元三滚🎸', label: 'TriRoll元三滚🎸' },
-    { value: '元培学院学生对元气值的使用情况调查', label: '元培学院学生对元气值的使用情况调查' },
-  ],
-}
+// 反馈类型到接收小组类型的映射（从后端加载）
+const feedbackTypeToOrg = computed(() => {
+  if (!organizationInfo.value)
+    return {}
+  return organizationInfo.value.feedback_type_mappings
+})
 
-// 反馈类型到接收小组类型的映射（与网页 change_org_type_and_org 一致）
-const feedbackTypeToOrg: Record<string, { orgType: string, org: string }> = {
-  '35楼生活权益反馈': { orgType: '学生会', org: '内联权益部' },
-  '地下室预约问题反馈': { orgType: '书院俱乐部', org: '智慧书院项目组' },
-  '智慧书院系统反馈': { orgType: '书院俱乐部', org: '智慧书院项目组' },
-  '团校反馈': { orgType: '团委', org: '团校秘书处' },
-  '学生会工作反馈': { orgType: '学生会', org: '' },
-  '通识课反馈': { orgType: '学学学委员会', org: '秘书处' },
-  '学术问题/培养方案反馈': { orgType: '学学学学会', org: '' },
-  '书院课程反馈': { orgType: '书院课程', org: '' },
-  '校内权益问题反馈': { orgType: '学生会', org: '常代表' },
-  '其他反馈': { orgType: '', org: '' },
-}
+const orgOptions = computed(() => orgByType.value[formOrgType.value] ?? [])
 
-const orgOptions = computed(() => orgByType[formOrgType.value] ?? [])
-
-// 反馈类型数组（用于 picker，确保是普通数组）
+// 反馈类型数组（用于 picker，只使用接口数据）
 const feedbackTypesArray = computed(() => {
-  return feedbackTypes.value.length > 0 ? feedbackTypes.value : FEEDBACK_TYPE_OPTIONS
+  return feedbackTypes.value
 })
 
 // 反馈类型 picker 的索引（确保返回有效值）
@@ -348,6 +77,18 @@ const feedbackTypeIndex = computed(() => {
   if (arr.length === 0)
     return 0
   const idx = arr.findIndex(t => t.id === formTypeId.value)
+  return idx >= 0 ? idx : 0
+})
+
+// 组织类型 picker 的索引
+const orgTypeIndex = computed(() => {
+  const idx = orgTypeOptions.value.findIndex(o => o.value === formOrgType.value)
+  return idx >= 0 ? idx : 0
+})
+
+// 组织 picker 的索引
+const orgIndex = computed(() => {
+  const idx = orgOptions.value.findIndex(o => o.value === formOrg.value)
   return idx >= 0 ? idx : 0
 })
 
@@ -365,17 +106,23 @@ watch(formTypeId, (typeId) => {
   const feedbackType = feedbackTypesArray.value.find(t => t.id === typeId)
   if (!feedbackType)
     return
-  const mapping = feedbackTypeToOrg[feedbackType.name]
+  const mapping = feedbackTypeToOrg.value[feedbackType.name]
   if (mapping) {
-    if (mapping.orgType) {
-      formOrgType.value = mapping.orgType
-      if (mapping.org) {
+    if (mapping.org_type_name) {
+      formOrgType.value = mapping.org_type_name
+      if (mapping.org_name) {
         // 等待 orgOptions 更新后再设置 org
         nextTick(() => {
-          const orgExists = orgOptions.value.some(o => o.value === mapping.org)
+          const orgExists = orgOptions.value.some(o => o.value === mapping.org_name)
           if (orgExists) {
-            formOrg.value = mapping.org
+            formOrg.value = mapping.org_name
           }
+        })
+      }
+      else {
+        // 如果没有指定组织，清空组织选择
+        nextTick(() => {
+          formOrg.value = ''
         })
       }
     }
@@ -399,12 +146,92 @@ async function loadTypes() {
   }
 }
 
+// 加载组织信息
+async function loadOrganizationInfo() {
+  try {
+    const res = await getOrganizationInfo()
+    // 验证响应数据结构
+    if (!res || typeof res !== 'object') {
+      console.error('组织信息响应格式错误:', res)
+      uni.showToast({ title: '组织信息格式错误', icon: 'none', duration: 3000 })
+      return
+    }
+
+    // 确保必要字段存在
+    if (!Array.isArray(res.org_types)) {
+      console.warn('组织信息缺少 org_types 字段，使用空数组')
+      res.org_types = []
+    }
+    if (!Array.isArray(res.organizations)) {
+      console.warn('组织信息缺少 organizations 字段，使用空数组')
+      res.organizations = []
+    }
+    if (!res.org_type_to_orgs || typeof res.org_type_to_orgs !== 'object') {
+      console.warn('组织信息缺少 org_type_to_orgs 字段，使用空对象')
+      res.org_type_to_orgs = {}
+    }
+    if (!res.feedback_type_mappings || typeof res.feedback_type_mappings !== 'object') {
+      console.warn('组织信息缺少 feedback_type_mappings 字段，使用空对象')
+      res.feedback_type_mappings = {}
+    }
+
+    organizationInfo.value = res
+    // 设置默认值（如果有数据且当前为空）
+    if (res.org_types.length > 0 && !formOrgType.value) {
+      formOrgType.value = res.org_types[0].otype_name
+      // 等待 orgOptions 更新后设置默认组织
+      await nextTick()
+      const defaultOrgs = orgOptions.value
+      if (defaultOrgs.length > 0) {
+        formOrg.value = defaultOrgs[0].value
+      }
+    }
+  }
+  catch (e: any) {
+    console.error('加载组织信息失败', e)
+    // 提取更详细的错误信息
+    let errorMsg = '加载组织信息失败'
+    if (e?.response?.statusCode === 500) {
+      errorMsg = '服务器错误，请联系管理员'
+    }
+    else if (e?.response?.data) {
+      // 尝试从响应中提取错误信息
+      const data = e.response.data
+      if (typeof data === 'string' && data.includes('error')) {
+        errorMsg = '服务器返回错误'
+      }
+      else if (data?.detail) {
+        errorMsg = data.detail
+      }
+      else if (data?.message) {
+        errorMsg = data.message
+      }
+    }
+    else if (e?.message) {
+      errorMsg = e.message
+    }
+
+    uni.showToast({
+      title: errorMsg,
+      icon: 'none',
+      duration: 3000,
+    })
+    // 即使加载失败，也设置一个空对象，避免后续代码报错
+    organizationInfo.value = {
+      org_types: [],
+      organizations: [],
+      org_type_to_orgs: {},
+      feedback_type_mappings: {},
+    }
+  }
+}
+
 // 初始化表单数据（编辑模式）
 async function initFormData() {
-  if (props.draft) {
+  if (draftId.value) {
     try {
       // 获取完整的草稿数据
-      const fullDraft = await getFeedback(props.draft.id)
+      const fullDraft = await getFeedback(draftId.value)
       console.log('加载草稿数据:', fullDraft)
 
       // 填充表单数据
@@ -445,10 +272,16 @@ async function initFormData() {
         }
       }
       else {
-        // 如果没有 org_type_name，使用默认值
-        formOrgType.value = '学生会'
-        await nextTick()
-        formOrg.value = '内联权益部'
+        // 如果没有 org_type_name，使用默认值（从后端数据获取第一个）
+        if (organizationInfo.value && organizationInfo.value.org_types.length > 0) {
+          formOrgType.value = organizationInfo.value.org_types[0].otype_name
+          await nextTick()
+          const defaultOrgs = orgOptions.value
+          if (defaultOrgs.length > 0) {
+            formOrg.value = defaultOrgs[0].value
+          }
+        }
+        // 如果后端数据未加载，保持为空
       }
     }
     catch (e) {
@@ -461,8 +294,19 @@ async function initFormData() {
     formTitle.value = ''
     formContent.value = ''
     formPublisherPublic.value = true
-    formOrgType.value = '学生会'
-    formOrg.value = '内联权益部'
+
+    // 设置默认组织类型和组织（从后端数据获取）
+    if (organizationInfo.value && organizationInfo.value.org_types.length > 0) {
+      formOrgType.value = organizationInfo.value.org_types[0].otype_name
+      const defaultOrgs = orgByType.value[formOrgType.value]
+      if (defaultOrgs && defaultOrgs.length > 0) {
+        formOrg.value = defaultOrgs[0].value
+      }
+      else {
+        formOrg.value = ''
+      }
+    }
+    // 如果后端数据未加载，保持为空
 
     // 确保 formTypeId 有值（允许 id 为 0）
     if ((formTypeId.value === null || formTypeId.value === undefined || formTypeId.value === '') && feedbackTypesArray.value.length > 0) {
@@ -470,11 +314,6 @@ async function initFormData() {
     }
   }
 }
-
-// 监听 draft prop 变化，重新初始化表单
-watch(() => props.draft, async () => {
-  await initFormData()
-}, { immediate: true })
 
 function handleFeedbackTypeChange(e: any) {
   const index = e.detail.value
@@ -524,7 +363,7 @@ async function submitFeedback(asDraft: boolean) {
     const typeValue = selectedType.name
 
     let result: Feedback
-    if (props.draft) {
+    if (draftId.value) {
       // 编辑草稿：使用 PATCH 更新
       const updatePayload: PatchedFeedbackUpdate = {
         type: typeValue,
@@ -535,7 +374,7 @@ async function submitFeedback(asDraft: boolean) {
         publisher_public: formPublisherPublic.value,
         post_type: asDraft ? 'modify' : 'submit_draft', // modify=修改，submit_draft=提交草稿
       }
-      result = await partialUpdateFeedback(props.draft.id, updatePayload)
+      result = await partialUpdateFeedback(draftId.value, updatePayload)
       console.log('更新草稿成功，返回数据:', result)
     }
     else {
@@ -579,13 +418,10 @@ async function submitFeedback(asDraft: boolean) {
 
     uni.showToast({ title: asDraft ? '草稿已保存' : '提交成功', icon: 'success' })
 
-    // 通知父组件
-    emit('success', { isDraft: asDraft, feedback: result })
-
-    // 如果不是草稿，关闭表单
-    if (!asDraft) {
-      emit('close')
-    }
+    // 提交成功后返回上一页
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
   }
   catch (e: any) {
     console.error('提交失败', e)
@@ -597,28 +433,27 @@ async function submitFeedback(asDraft: boolean) {
   }
 }
 
-function handleClose() {
-  emit('close')
-}
-
-// 组件挂载时加载反馈类型
+// 页面挂载时加载数据
 onMounted(async () => {
-  await loadTypes()
+  // 获取路由参数
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = (currentPage as any).options || {}
+  draftId.value = options.id || ''
+
+  // 并行加载反馈类型和组织信息
+  await Promise.all([
+    loadTypes(),
+    loadOrganizationInfo(),
+  ])
+
+  // 初始化表单数据
   await initFormData()
 })
 </script>
 
 <template>
-  <view class="feedback-form-screen">
-    <view class="feedback-form-header">
-      <view class="feedback-form-header-side" hover-class="none" @click="handleClose">
-        <text class="i-carbon-arrow-left text-xl text-[#1b55e2]" />
-      </view>
-      <text class="feedback-form-title">{{ draft ? '编辑草稿' : '反馈详情' }}</text>
-      <view class="feedback-form-header-side feedback-form-header-right">
-        <text class="text-sm text-[#424344] underline">匿名</text>
-      </view>
-    </view>
+  <view class="feedback-form-page min-h-screen bg-[#f8f9fa] pb-10">
     <scroll-view scroll-y class="feedback-form-scroll" :show-scrollbar="false">
       <view class="feedback-form-body">
         <!-- 反馈类型 -->
@@ -653,7 +488,7 @@ onMounted(async () => {
         <view class="form-group mb-4">
           <text class="mb-2 block text-sm text-[#424344] font-medium">接收小组类型</text>
           <picker
-            :value="orgTypeOptions.findIndex(o => o.value === formOrgType)"
+            :value="orgTypeIndex"
             :range="orgTypeOptions"
             range-key="label"
             class="form-picker"
@@ -669,7 +504,7 @@ onMounted(async () => {
         <view class="form-group mb-4">
           <text class="mb-2 block text-sm text-[#424344] font-medium">接收小组</text>
           <picker
-            :value="orgOptions.findIndex(o => o.value === formOrg)"
+            :value="orgIndex"
             :range="orgOptions"
             range-key="label"
             class="form-picker"
@@ -729,48 +564,12 @@ onMounted(async () => {
 </template>
 
 <style lang="scss" scoped>
-.feedback-form-screen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 100;
-  background: #f8f9fa;
-  display: flex;
-  flex-direction: column;
-}
-
-.feedback-form-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.feedback-form-header-side {
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.feedback-form-header-right {
-  justify-content: flex-end;
-}
-
-.feedback-form-title {
-  flex: 1;
-  text-align: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1b55e2;
+.feedback-form-page {
+  padding-top: 0;
 }
 
 .feedback-form-scroll {
-  flex: 1;
+  height: 100vh;
   overflow-y: auto;
 }
 

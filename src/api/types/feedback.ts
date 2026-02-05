@@ -114,3 +114,31 @@ export interface PatchedFeedbackUpdate {
   images?: string[]
   [key: string]: unknown
 }
+
+/** 组织类型 */
+export interface OrgType {
+  otype_id: number
+  otype_name: string
+}
+
+/** 组织 */
+export interface Organization {
+  organization_id: number
+  oname: string
+  otype_id: number
+  otype_name: string
+}
+
+/** 反馈类型到组织的映射 */
+export interface FeedbackTypeMapping {
+  org_type_name: string | null
+  org_name: string | null
+}
+
+/** 组织信息响应 */
+export interface OrganizationInfoResponse {
+  org_types: OrgType[]
+  organizations: Organization[]
+  org_type_to_orgs: Record<string, string[]>
+  feedback_type_mappings: Record<string, FeedbackTypeMapping>
+}

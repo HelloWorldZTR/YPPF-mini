@@ -3,6 +3,7 @@ import type {
   FeedbackCreate,
   FeedbackListQuery,
   FeedbackType,
+  OrganizationInfoResponse,
   PatchedFeedbackUpdate,
 } from './types/feedback'
 import { http } from '@/http/http'
@@ -77,4 +78,11 @@ export function listInProgressFeedback(query?: { ordering?: string }) {
  */
 export function listDoneFeedback(query?: { ordering?: string }) {
   return http.get<Feedback[]>('/api/v2/feedback/done/', query)
+}
+
+/**
+ * 获取组织信息（组织类型、组织列表、映射关系等）
+ */
+export function getOrganizationInfo() {
+  return http.get<OrganizationInfoResponse>('/api/v2/feedback/org-mapping/')
 }

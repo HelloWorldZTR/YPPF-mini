@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Feedback, FeedbackType, SolveStatus } from '@/api/types/feedback'
+import { onShow } from '@dcloudio/uni-app'
 import {
   deleteFeedback,
   getFeedbackTypes,
@@ -8,7 +9,6 @@ import {
   listInProgressFeedback,
   listPublicFeedback,
 } from '@/api/feedback'
-import FeedbackForm from './feedbackForm.vue'
 
 definePage({
   style: {
@@ -17,10 +17,6 @@ definePage({
     navigationBarTextStyle: 'white',
   },
 })
-
-// 列表视图 / 写反馈表单
-const showCreateForm = ref(false)
-const editingDraft = ref<Feedback | null>(null) // 当前编辑的草稿数据
 
 const feedbackTypes = ref<FeedbackType[]>([])
 const list = ref<Feedback[]>([])
@@ -188,34 +184,12 @@ function cardTitle(item: Feedback): string {
 
 // 新建反馈
 function goCreate() {
-  editingDraft.value = null
-  showCreateForm.value = true
+  uni.navigateTo({ url: '/pages/appmenu/feedback/feedbackForm' })
 }
 
 // 编辑草稿
 function goEditDraft(draft: Feedback) {
-  editingDraft.value = draft
-  showCreateForm.value = true
-}
-
-// 处理表单成功提交
-function handleFormSuccess(data: { isDraft: boolean, feedback: Feedback }) {
-  if (data.isDraft) {
-    // 保存草稿：只刷新我的反馈
-    loadMyFeedback()
-  }
-  else {
-    // 提交反馈：刷新所有列表并返回列表页
-    editingDraft.value = null
-    loadMyFeedback()
-    backToList()
-  }
-}
-
-// 处理表单关闭
-function handleFormClose() {
-  editingDraft.value = null
-  showCreateForm.value = false
+  uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackForm?id=${draft.id}` })
 }
 
 // 删除草稿
@@ -244,12 +218,6 @@ async function handleDeleteDraft(draft: Feedback, e?: Event) {
   })
 }
 
-function backToList() {
-  editingDraft.value = null
-  showCreateForm.value = false
-  loadList()
-}
-
 // 点击反馈卡片：草稿跳转编辑，已发布的跳转详情
 function onCardClick(item: Feedback) {
   if (item.issue_status === 0) {
@@ -258,7 +226,7 @@ function onCardClick(item: Feedback) {
   }
   else {
     // 已发布：跳转详情页
-    uni.navigateTo({ url: `/pages/appmenu/Feedback/feedbackDetail?id=${item.id}` })
+    uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackDetail?id=${item.id}` })
   }
 }
 
@@ -266,20 +234,18 @@ onMounted(() => {
   loadList()
   loadMyFeedback()
 })
+
+// 页面显示时刷新列表（从表单页面返回时）
+onShow(() => {
+  loadList()
+  loadMyFeedback()
+})
 </script>
 
 <template>
   <view class="feedback-page min-h-screen bg-[#f8f9fa] pb-10">
-    <!-- 写反馈表单组件 -->
-    <FeedbackForm
-      v-if="showCreateForm"
-      :draft="editingDraft"
-      @close="handleFormClose"
-      @success="handleFormSuccess"
-    />
-
     <!-- 主界面：与网页版一致的布局 -->
-    <view v-else class="layout-top-spacing">
+    <view class="layout-top-spacing">
       <!-- 左侧欢迎区 -->
       <view class="bio layout-spacing px-4 pt-4">
         <view class="widget-content relative rounded-lg bg-white p-4 shadow-sm">
