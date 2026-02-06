@@ -47,7 +47,7 @@ const APP_LIST_ORG = [
   {
     name: '实用工具',
     apps: [
-      { name: '反馈中心', icon: 'i-carbon-chat-bot', color: 'text-green-500', url: '/pages/appmenu/feedback' },
+      { name: '反馈中心', icon: 'i-carbon-chat-bot', color: 'text-green-500', url: '/pages/appmenu/feedback/feedback' },
       { name: '旧版预约', icon: 'i-carbon-calendar', color: 'text-pink-600', url: '/pages/generic/webview?uri=/underground' },
     ],
   },

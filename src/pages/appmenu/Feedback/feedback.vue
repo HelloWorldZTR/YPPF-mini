@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Feedback, FeedbackType, SolveStatus } from '@/api/types/feedback'
 import { onShow } from '@dcloudio/uni-app'
+import { storeToRefs } from 'pinia'
 import {
   deleteFeedback,
   getFeedbackTypes,
@@ -9,6 +10,7 @@ import {
   listInProgressFeedback,
   listPublicFeedback,
 } from '@/api/feedback'
+import { useUserStore } from '@/store/user'
 
 definePage({
   style: {
@@ -33,6 +35,10 @@ const myListLoading = ref(false)
 const aid = ref<number>(0)
 // 已处理过的 aid，用于防止从表单返回未提交时重复跳转（死锁）
 const handledAidRef = ref<number | null>(null)
+
+// 小组账户不显示草稿箱
+const { userInfo } = storeToRefs(useUserStore())
+const showDraftTab = computed(() => !userInfo.value.is_org)
 
 /**
  * 状态说明：
@@ -381,6 +387,7 @@ onShow(() => {
           </view>
           <view class="nav-tabs nav-tabs-solid flex border border-gray-200 rounded-lg bg-gray-50">
             <view
+              v-if="showDraftTab"
               class="nav-item flex-1 text-center"
               :class="{ 'nav-link-active': myFeedbackTab === 'draft' }"
               hover-class="none"
@@ -412,8 +419,8 @@ onShow(() => {
             </view>
           </view>
           <view class="tab-content mt-4">
-            <!-- 草稿箱 -->
-            <view v-show="myFeedbackTab === 'draft'" class="tab-pane">
+            <!-- 草稿箱（小组账户不显示） -->
+            <view v-show="showDraftTab && myFeedbackTab === 'draft'" class="tab-pane">
               <view v-if="myListLoading" class="py-10 text-center text-sm text-[#424344]">
                 加载中...
               </view>
@@ -488,8 +495,8 @@ onShow(() => {
                 </view>
               </view>
             </view>
-            <!-- 进行中 -->
-            <view v-show="myFeedbackTab === 'inProgress'" class="tab-pane">
+            <!-- 进行中（小组账户无草稿时也显示） -->
+            <view v-show="myFeedbackTab === 'inProgress' || (myFeedbackTab === 'draft' && !showDraftTab)" class="tab-pane">
               <view v-if="myListLoading" class="py-10 text-center text-sm text-[#424344]">
                 加载中...
               </view>
