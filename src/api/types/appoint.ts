@@ -144,7 +144,7 @@ export interface ICheckoutInfoResponse {
   has_longterm_permission?: boolean
   has_interview_permission?: boolean
   interview_max_count?: number
-  member_ids?: any[]
+  member_ids?: string[]
 }
 
 // 提交预约请求参数

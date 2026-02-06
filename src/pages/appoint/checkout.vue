@@ -172,10 +172,11 @@ async function fetchData() {
     data.value = res
     console.log(data.value)
 
-    // 初始化已有成员
+    // 初始化已有成员，member_ids 格式: ["user1", "ztr"]
     if (res.member_ids && Array.isArray(res.member_ids)) {
-      formData.students = [...res.member_ids]
+      formData.students = res.member_ids.map((id: string) => String(id))
     }
+    console.log(formData.students)
   }
   catch (error) {
     console.error(error)
@@ -230,15 +231,15 @@ function removeStudent(id: string) {
   }
 }
 
-// 一键添加所有可用成员（从 member_ids）
+// 一键添加所有可用成员，member_ids 格式: ["user1", "ztr"]
 function addAllMembers() {
   const memberIds = data.value?.member_ids || []
   let addedCount = 0
-  memberIds.forEach((member: any) => {
-    const id = String(member.id)
-    if (!formData.students.includes(id)) {
-      formData.students.push(id)
-      memberNames.value[id] = member.name || id
+  memberIds.forEach((id) => {
+    const sid = String(id)
+    if (!formData.students.includes(sid)) {
+      formData.students.push(sid)
+      memberNames.value[sid] = sid
       addedCount++
     }
   })
@@ -660,7 +661,7 @@ function goBack() {
     </view>
 
     <!-- 提交按钮区域 -->
-    <view class="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 pt-3 shadow-lg pb-safe">
+    <view class="fixed bottom-0 left-0 right-0 z-50 bg-white px-4 pt-3 pb-safe shadow-lg">
       <!-- 提示信息 -->
       <view v-if="isLongterm" class="mb-2 text-center text-xs text-orange-600">
         长期预约将提交审核，通过后生效
