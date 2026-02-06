@@ -34,9 +34,8 @@ async function fetchData() {
 }
 
 function handleAppeal(aid: number, room: string | null | undefined) {
-  const roomParam = room ? `&room=${encodeURIComponent(room)}` : ''
   uni.navigateTo({
-    url: `/pages/appmenu/feedback?aid=${aid}${roomParam}`,
+    url: `/pages/appmenu/feedback/feedback?aid=${aid}`,
   })
 }
 

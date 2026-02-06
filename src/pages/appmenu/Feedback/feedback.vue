@@ -29,6 +29,11 @@ const myInProgressList = ref<Feedback[]>([])
 const myDoneList = ref<Feedback[]>([])
 const myListLoading = ref(false)
 
+// 从query获得的aid信息，如果有，说明是准备申诉
+const aid = ref<number>(0)
+// 已处理过的 aid，用于防止从表单返回未提交时重复跳转（死锁）
+const handledAidRef = ref<number | null>(null)
+
 /**
  * 状态说明：
  * - issue_status=0: 草稿
@@ -103,6 +108,42 @@ async function loadMyFeedback() {
   finally {
     myListLoading.value = false
   }
+}
+
+/** 申诉逻辑：根据 aid 查找或跳转表单，避免死锁 */
+function handleAidIfNeeded() {
+  const aidVal = aid.value
+  if (!aidVal)
+    return
+
+  const expectedTitle = `地下室预约申诉（${aidVal}）`
+  const allLists = [...myDraftList.value, ...myInProgressList.value, ...myDoneList.value]
+  const found = allLists.find(item => (item.title || cardTitle(item)) === expectedTitle)
+
+  if (found) {
+    handledAidRef.value = aidVal
+    if (found.issue_status === 0) {
+      // 草稿，跳转
+      uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackForm?id=${found.id}` })
+    }
+    else {
+      // 已经发布了提示，这个填完表之后，按返回键还会跳转回来，为了防止死锁不能再跳转
+      uni.showToast({ title: '您的申诉已经发布，请等待处理', icon: 'none' })
+    }
+    return
+  }
+
+  // 未找到：跳转表单新建。若已处理过（用户从表单返回未提交），则不再跳转，防止死锁
+  if (handledAidRef.value === aidVal)
+    return
+  handledAidRef.value = aidVal
+  uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackForm?aid=${aidVal}&lockedTitle=1` })
+}
+
+async function loadAndRefresh() {
+  await loadList()
+  await loadMyFeedback()
+  handleAidIfNeeded()
 }
 
 function setMyFeedbackTab(tab: 'draft' | 'inProgress' | 'done') {
@@ -210,8 +251,6 @@ async function handleDeleteDraft(draft: Feedback, e?: Event) {
         }
         catch (e: any) {
           console.error('删除草稿失败', e)
-          const errorMsg = e?.response?.data?.detail || e?.message || '删除失败，请重试'
-          uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
         }
       }
     },
@@ -226,85 +265,23 @@ function onCardClick(item: Feedback) {
   }
   else {
     // 已发布：跳转详情页
-    uni.navigateTo({ url: `/pages/appmenu/feedback/feedbackDetail?id=${item.id}` })
+    uni.navigateTo({ url: `/pages/generic/webview?uri=/viewFeedback/${item.id}` })
   }
 }
 
-/** 处理从 querystring 进入的申诉/预填：feedback_id → 跳转详情；aid → 已有申诉跳转否则预填；type/content → 预填表单 */
-onLoad(async (options: Record<string, string> = {}) => {
-  const feedbackId = options.feedback_id ?? options.id
-  const typeParam = options.type ?? options.feedback_type
-  const contentParam = options.content ?? options.feedback_content
-  const aidParam = options.aid ? Number(options.aid) : 0
-  const roomParam = options.room ? decodeURIComponent(options.room) : ''
-
-  if (feedbackId) {
-    uni.redirectTo({ url: `/pages/appmenu/feedbackDetail?id=${feedbackId}` })
-    return
-  }
-
-  if (aidParam > 0) {
-    try {
-      const [draftRes, publishedRes] = await Promise.all([
-        listFeedback({ issue_status: 0, ordering: '-modify_time' }),
-        listFeedback({ issue_status: 1, ordering: '-feedback_time' }),
-      ])
-      const myAll = [...draftRes, ...publishedRes]
-      const existing = findExistingAppealByAid(myAll, aidParam)
-      if (existing) {
-        uni.redirectTo({ url: `/pages/appmenu/feedbackDetail?id=${existing.id}` })
-        return
-      }
-      const violationsRes = await getMyViolations()
-      const violation = violationsRes?.vio_list?.find(v => v.Aid === aidParam)
-      formTitle.value = appealTitle(aidParam)
-      isAppealFromAid.value = true
-      if (violation) {
-        formContent.value = buildAppealContent(violation)
-        formTypeId.value = APPEAL_TYPE_ID
-      }
-      else {
-        formContent.value = [
-          `申请人：（待填写）`,
-          `房间：${roomParam || '—'}`,
-          `预约ID：${aidParam}`,
-          `违规原因：（待填写）`,
-        ].join('\n')
-        formTypeId.value = APPEAL_TYPE_ID
-      }
-      await loadTypes()
-      if (!feedbackTypes.value.some(t => String(t.id) === String(APPEAL_TYPE_ID)))
-        formTypeId.value = feedbackTypes.value[0]?.id ?? APPEAL_TYPE_ID
-      showCreateForm.value = true
-    }
-    catch (e) {
-      console.error('申诉预填失败', e)
-      uni.showToast({ title: '加载失败', icon: 'none' })
-    }
-    return
-  }
-
-  if (typeParam || contentParam) {
-    if (typeParam)
-      formTypeId.value = decodeURIComponent(typeParam)
-    if (contentParam)
-      formContent.value = decodeURIComponent(contentParam)
-    await loadTypes()
-    if (typeParam && !feedbackTypes.value.some(t => String(t.id) === String(formTypeId.value)))
-      formTypeId.value = feedbackTypes.value[0]?.id ?? formTypeId.value
-    showCreateForm.value = true
+onLoad((options: Record<string, string> = {}) => {
+  if (options.aid) {
+    aid.value = Number(options.aid)
   }
 })
 
 onMounted(() => {
-  loadList()
-  loadMyFeedback()
+  loadAndRefresh()
 })
 
 // 页面显示时刷新列表（从表单页面返回时）
 onShow(() => {
-  loadList()
-  loadMyFeedback()
+  loadAndRefresh()
 })
 </script>
 

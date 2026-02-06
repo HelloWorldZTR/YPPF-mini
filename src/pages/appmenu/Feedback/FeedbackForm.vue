@@ -21,6 +21,10 @@ definePage({
 const draftId = ref<string>('')
 const isEditMode = computed(() => !!draftId.value)
 
+// 申诉模式：aid + lockedTitle，标题锁死为「地下室预约申诉（x）」
+const appealAid = ref<number>(0)
+const isAppealMode = computed(() => appealAid.value > 0)
+
 // 表单状态
 const formTypeId = ref<string | number>('')
 const formTitle = ref('')
@@ -189,33 +193,6 @@ async function loadOrganizationInfo() {
   }
   catch (e: any) {
     console.error('加载组织信息失败', e)
-    // 提取更详细的错误信息
-    let errorMsg = '加载组织信息失败'
-    if (e?.response?.statusCode === 500) {
-      errorMsg = '服务器错误，请联系管理员'
-    }
-    else if (e?.response?.data) {
-      // 尝试从响应中提取错误信息
-      const data = e.response.data
-      if (typeof data === 'string' && data.includes('error')) {
-        errorMsg = '服务器返回错误'
-      }
-      else if (data?.detail) {
-        errorMsg = data.detail
-      }
-      else if (data?.message) {
-        errorMsg = data.message
-      }
-    }
-    else if (e?.message) {
-      errorMsg = e.message
-    }
-
-    uni.showToast({
-      title: errorMsg,
-      icon: 'none',
-      duration: 3000,
-    })
     // 即使加载失败，也设置一个空对象，避免后续代码报错
     organizationInfo.value = {
       org_types: [],
@@ -294,6 +271,13 @@ async function initFormData() {
     formTitle.value = ''
     formContent.value = ''
     formPublisherPublic.value = true
+
+    // 申诉模式：标题锁死，预填入信息
+    if (appealAid.value > 0) {
+      formTitle.value = `地下室预约申诉（${appealAid.value}）`
+      formContent.value = `[预约编号：${appealAid.value}]请不要修改，方便管理老师查询。`
+      // TODO: 获取预约信息
+    }
 
     // 设置默认组织类型和组织（从后端数据获取）
     if (organizationInfo.value && organizationInfo.value.org_types.length > 0) {
@@ -403,7 +387,7 @@ async function submitFeedback(asDraft: boolean) {
 
     // 验证后端返回的状态是否正确
     if (asDraft && result.issue_status !== 0) {
-      console.error('❌ 错误：保存草稿时，后端返回的 issue_status 不是 0，而是', result.issue_status)
+      console.error('错误：保存草稿时，后端返回的 issue_status 不是 0，而是', result.issue_status)
       uni.showToast({
         title: `草稿保存失败（状态异常：${result.issue_status_display || result.issue_status}）`,
         icon: 'none',
@@ -413,33 +397,40 @@ async function submitFeedback(asDraft: boolean) {
       return
     }
     else if (!asDraft && result.issue_status !== 1) {
-      console.error('❌ 错误：提交反馈时，后端返回的 issue_status 不是 1，而是', result.issue_status)
+      console.error('错误：提交反馈时，后端返回的 issue_status 不是 1，而是', result.issue_status)
     }
 
-    uni.showToast({ title: asDraft ? '草稿已保存' : '提交成功', icon: 'success' })
+    uni.showToast({
+      title: asDraft ? '草稿已保存' : '提交成功',
+      icon: 'success',
+    })
 
-    // 提交成功后返回上一页
+    // 一键回城，清空页面栈
     setTimeout(() => {
-      uni.navigateBack()
+      uni.reLaunch({ url: '/pages/appmenu/appmenu' })
     }, 1500)
   }
-  catch (e: any) {
+  catch (e) {
     console.error('提交失败', e)
-    const errorMsg = e?.response?.data?.detail || e?.message || '提交失败，请重试'
-    uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
+    uni.showToast({
+      title: '提交失败',
+      icon: 'error',
+    })
   }
   finally {
     formSubmitting.value = false
   }
 }
 
-// 页面挂载时加载数据
 onMounted(async () => {
   // 获取路由参数
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const options = (currentPage as any).options || {}
   draftId.value = options.id || ''
+  if (options.aid && options.lockedTitle === '1') {
+    appealAid.value = Number(options.aid)
+  }
 
   // 并行加载反馈类型和组织信息
   await Promise.all([
@@ -478,8 +469,10 @@ onMounted(async () => {
           <textarea
             v-model="formTitle"
             class="form-textarea"
+            :class="{ 'form-textarea-disabled': isAppealMode }"
             placeholder="标题不能超过25字符噢！"
             :maxlength="25"
+            :disabled="isAppealMode"
             show-confirm-bar
           />
           <text class="mt-2 block text-xs text-[#424344] font-bold">请文明理性发言，共同营造良好的网络环境！</text>
@@ -621,6 +614,11 @@ onMounted(async () => {
 
 .form-textarea-large {
   min-height: 120px;
+}
+
+.form-textarea-disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
 }
 
 .form-buttons {
