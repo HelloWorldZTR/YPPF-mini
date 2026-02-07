@@ -9,6 +9,18 @@ const tokenStore = useTokenStore()
 // 使用storeToRefs解构userInfo
 const { userInfo } = storeToRefs(userStore)
 
+const activityId = ref<string>('')
+
+function handleNavigateToCheckin() {
+  if (!activityId.value) {
+    uni.showToast({
+      title: '请输入活动ID',
+      icon: 'none',
+    })
+    return
+  }
+  uni.navigateTo({ url: `/pages/activity/checkin?scene=qd_${activityId.value}` })
+}
 function handleForceRelogin() {
   const myUsername = userInfo.value.username
   tokenStore.wxLogin(myUsername)
@@ -68,6 +80,13 @@ function handleNavigateToWebview() {
         @click="handleNavigateToWebview"
       >
         跳转Webview页面
+      </button>
+      <input v-model="activityId" type="text" placeholder="活动ID">
+      <button
+        class="rounded bg-green-500 px-4 py-2 text-white"
+        @click="handleNavigateToCheckin"
+      >
+        跳转签到页面
       </button>
     </view>
   </view>

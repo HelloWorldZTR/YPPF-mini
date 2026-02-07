@@ -63,3 +63,11 @@ export interface IActivityHomepage {
   prepare_times: number[] // 报名截止时间配置列表 [1, 24, 72, 168]（一小时，一天，三天，一周）
   signup_activities: ISignupActivity[] // 即将截止报名的活动，按截止时间正序，最多返回10条
 }
+
+/**
+ * 签到结果响应
+ * 如果200就成功，失败就是40x，body是DRF格式的错误信息
+ */
+export interface ICheckInRes {
+  message: string
+}

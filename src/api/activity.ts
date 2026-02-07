@@ -1,4 +1,4 @@
-import type { IActivityHomepage } from './types/activity'
+import type { IActivityHomepage, IActivitySummary, ICheckInRes } from './types/activity'
 import { http } from '@/http/http'
 
 /**
@@ -13,4 +13,22 @@ import { http } from '@/http/http'
  */
 export function getActivityOverview() {
   return http.get<IActivityHomepage>('/api/v2/activity/overview/')
+}
+
+/**
+ * 获取指定活动的信息
+ * @param id 活动ID
+ * @returns 活动信息
+ */
+export function getActivityInfo(id: number) {
+  return http.get<IActivitySummary>(`/api/v2/activity/${id}/`)
+}
+
+/**
+ * 签到指定活动
+ * @param id 活动ID
+ * @returns 签到结果
+ */
+export function checkInActivity(id: number) {
+  return http.post<ICheckInRes>(`/api/v2/activity/checkin/`, { aid: id })
 }
