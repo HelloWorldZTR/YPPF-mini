@@ -1,3 +1,4 @@
+<!-- 这一页真应该改成分页显示，卡死了这个玩意，有些人不喜欢点掉未读一攒好几百条 -->
 <script lang="ts" setup>
 import type { Notification, NotificationListQuery } from '@/api/types/notification'
 import { onMounted, ref } from 'vue'
@@ -240,59 +241,38 @@ onMounted(() => {
 
 <template>
   <view class="min-h-screen bg-gray-50 pb-20">
-    <!-- 统计卡片 -->
-    <!-- <view class="bg-blue-600 px-4 pb-6 pt-4">
-      <view class="flex justify-around rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
-        <view class="flex-1 text-center">
-          <view class="text-2xl text-white font-bold">
-            {{ statistics.total }}
-          </view>
-          <view class="mt-1 text-xs text-blue-100">
-            全部
-          </view>
-        </view>
-        <view class="flex-1 border-x border-white/20 text-center">
-          <view class="text-2xl text-white font-bold">
-            {{ statistics.unread }}
-          </view>
-          <view class="mt-1 text-xs text-blue-100">
-            未读
-          </view>
-        </view>
-        <view class="flex-1 text-center">
-          <view class="text-2xl text-white font-bold">
-            {{ statistics.read }}
-          </view>
-          <view class="mt-1 text-xs text-blue-100">
-            已读
-          </view>
-        </view>
-      </view>
-    </view> -->
-
     <!-- 筛选标签 -->
     <view class="sticky top-0 z-10 bg-white px-4 py-3 shadow-sm">
-      <view class="mb-3 flex gap-2">
-        <view
-          class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
-          :class="activeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
-          @click="handleTabChange('all')"
-        >
-          全部
+      <view class="mb-3 flex items-center justify-between">
+        <view class="flex gap-2">
+          <view
+            class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
+            :class="activeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+            @click="handleTabChange('all')"
+          >
+            全部
+          </view>
+          <view
+            class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
+            :class="activeTab === 'unread' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+            @click="handleTabChange('unread')"
+          >
+            未读 ({{ statistics.unread }})
+          </view>
+          <view
+            class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
+            :class="activeTab === 'read' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
+            @click="handleTabChange('read')"
+          >
+            已读 ({{ statistics.read }})
+          </view>
         </view>
         <view
-          class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
-          :class="activeTab === 'unread' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
-          @click="handleTabChange('unread')"
+          class="cursor-pointer rounded-full p-2 text-blue-600 active:bg-blue-50"
+          :class="{ 'opacity-60': refreshing }"
+          @click="onRefresh"
         >
-          未读 ({{ statistics.unread }})
-        </view>
-        <view
-          class="cursor-pointer rounded-full px-4 py-1.5 text-sm transition"
-          :class="activeTab === 'read' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'"
-          @click="handleTabChange('read')"
-        >
-          已读 ({{ statistics.read }})
+          <view class="i-carbon-renew text-lg" />
         </view>
       </view>
 
@@ -314,13 +294,7 @@ onMounted(() => {
     </view>
 
     <!-- 通知列表 -->
-    <scroll-view
-      scroll-y
-      refresher-enabled
-      :refresher-triggered="refreshing"
-      class="mt-3 box-border px-4"
-      @refresherrefresh="onRefresh"
-    >
+    <scroll-view scroll-y class="mt-3 box-border px-4">
       <view v-if="loading" class="py-20 text-center text-gray-400">
         加载中...
       </view>
