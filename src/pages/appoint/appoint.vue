@@ -143,6 +143,12 @@ function goToArrangeByTime() {
     url: `/pages/appoint/arrange-by-time`,
   })
 }
+
+function goToMyAppointments() {
+  uni.navigateTo({
+    url: `/pages/me/my-appointments`,
+  })
+}
 </script>
 
 <template>
@@ -150,11 +156,22 @@ function goToArrangeByTime() {
   <uv-navbar
     title="预约房间"
     :safe-area-inset-top="true"
-    left-icon="clock"
     :placeholder="true"
     :auto-back="false"
-    @left-click="goToArrangeByTime"
-  />
+  >
+    <template #left>
+      <view class="uv-nav-slot">
+        <view class="i-carbon-arrows-horizontal text-lg text-gray-800" @click="goToArrangeByTime" />
+        <uv-line
+          direction="column"
+          :hairline="false"
+          length="16"
+          margin="0 8px"
+        />
+        <view class="i-carbon-time text-lg text-gray-800" @click="goToMyAppointments" />
+      </view>
+    </template>
+  </uv-navbar>
   <!-- 公告栏 -->
   <view v-if="announcements.length > 0" class="px-3 pt-3">
     <uv-notice-bar
@@ -278,6 +295,21 @@ function goToArrangeByTime() {
   </view>
 </template>
 
-<style lang="scss" scoped>
-// 自定义样式
+<style scoped lang="scss">
+  @mixin flex($direction: row) {
+  /* #ifndef APP-NVUE */
+  display: flex;
+  /* #endif */
+  flex-direction: $direction;
+}
+.uv-nav-slot {
+  @include flex;
+  align-items: center;
+  justify-content: space-between;
+  border-width: 1px;
+  border-radius: 100px;
+  border-color: #dadbde;
+  padding: 3px 7px;
+  opacity: 0.8;
+}
 </style>

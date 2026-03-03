@@ -64,7 +64,7 @@ const APP_LIST_ORG = [
 ]
 
 const appGroups = computed(() => {
-  return userInfo.value.is_person ? APP_LIST_PERSON : APP_LIST_ORG
+  return userInfo.value.is_org ? APP_LIST_ORG : APP_LIST_PERSON
 })
 
 function handleAppClick(url: string) {

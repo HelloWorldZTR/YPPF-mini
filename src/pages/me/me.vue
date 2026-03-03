@@ -214,22 +214,24 @@ function handleProfile() {
       </view>
 
       <!-- 解绑按钮 -->
-      <view v-if="tokenStore.hasLogin && showUnbind" class="mt-8 px-2">
-        <button
-          class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-red-500 font-medium shadow-sm transition-opacity active:opacity-70"
-          @click="handleUnbind"
-        >
-          解除绑定
-        </button>
-      </view>
-      <view v-else class="mt-8 px-2">
-        <button
-          class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-blue-500 font-medium shadow-sm transition-opacity active:opacity-70"
-          @click="handleGotoMain"
-        >
-          返回主账号
-        </button>
-      </view>
+      <template v-if="tokenStore.hasLogin">
+        <view v-if="showUnbind" class="mt-8 px-2">
+          <button
+            class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-red-500 font-medium transition-opacity shadow-sm active:opacity-70"
+            @click="handleUnbind"
+          >
+            解除绑定
+          </button>
+        </view>
+        <view v-else class="mt-8 px-2">
+          <button
+            class="w-full rounded-xl border-none bg-white py-3 text-center text-lg text-blue-500 font-medium transition-opacity shadow-sm active:opacity-70"
+            @click="handleGotoMain"
+          >
+            返回主账号
+          </button>
+        </view>
+      </template>
     </view>
   </view>
 </template>
