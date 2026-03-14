@@ -4,7 +4,7 @@ import type { ICarouselItem } from '@/api/types/carousel'
 import { onMounted, ref } from 'vue'
 import { getActivityOverview } from '@/api/activity'
 import { getCarouselList } from '@/api/carousel'
-import { everydaySignIn } from '@/api/login'
+import { everydaySignIn, getUserMe } from '@/api/login'
 import ActivityCard from '@/components/ActivityCard.vue'
 import { toBackendURL } from '@/utils'
 
@@ -89,6 +89,14 @@ function onCarouselClick(index: number) {
 }
 
 onMounted(async () => {
+  // 未登录时先请求一次个人信息，统一在进入页面前完成 401 → 绑定页跳转，避免签到、活动等多个接口连续触发多次跳转
+  try {
+    await getUserMe()
+  }
+  catch {
+    return
+  }
+
   try {
     const data = await everydaySignIn()
     if (data?.message) {

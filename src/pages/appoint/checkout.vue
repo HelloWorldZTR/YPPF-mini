@@ -591,19 +591,19 @@ function goBack() {
           />
         </view>
 
-        <!-- 搜索加载中 -->
+        <!-- 搜索加载中（向上弹出，避免被键盘遮挡） -->
         <view
           v-if="showSearchResults && searchQuery && searchLoading"
-          class="absolute left-4 right-4 top-full z-20 mt-1 border border-gray-200 rounded-lg bg-white px-4 py-4 text-center shadow-lg"
+          class="absolute bottom-full left-4 right-4 z-20 mb-1 border border-gray-200 rounded-lg bg-white px-4 py-4 text-center shadow-lg"
         >
           <uv-loading-icon mode="circle" size="20" />
           <text class="ml-2 text-sm text-gray-400">搜索中...</text>
         </view>
 
-        <!-- 搜索结果下拉 -->
+        <!-- 搜索结果（向上弹出，避免被键盘遮挡） -->
         <view
           v-else-if="showSearchResults && searchQuery && searchResults.length > 0"
-          class="absolute left-4 right-4 top-full z-20 mt-1 overflow-hidden border border-gray-200 rounded-lg bg-white shadow-lg"
+          class="absolute bottom-full left-4 right-4 z-20 mb-1 max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg"
         >
           <view
             v-for="user in searchResults"
@@ -626,7 +626,7 @@ function goBack() {
         <!-- 无搜索结果 -->
         <view
           v-else-if="showSearchResults && searchQuery && !searchLoading && searchResults.length === 0"
-          class="absolute left-4 right-4 top-full z-20 mt-1 border border-gray-200 rounded-lg bg-white px-4 py-6 text-center shadow-lg"
+          class="absolute bottom-full left-4 right-4 z-20 mb-1 border border-gray-200 rounded-lg bg-white px-4 py-6 text-center shadow-lg"
         >
           <div class="i-carbon-search mx-auto mb-2 text-2xl text-gray-300" />
           <text class="text-sm text-gray-400">未找到匹配的成员</text>
