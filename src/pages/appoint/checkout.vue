@@ -42,7 +42,6 @@ const memberNames = ref<Record<string, string>>({})
 
 // 搜索相关
 const searchQuery = ref('')
-const showSearchResults = ref(false)
 const searchResults = ref<ISearchUserItem[]>([])
 const searchLoading = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -200,21 +199,10 @@ function addStudentFromSearch(user: ISearchUserItem) {
   formData.students.push(id)
   memberNames.value[id] = user.name
   searchQuery.value = ''
-  showSearchResults.value = false
   searchResults.value = []
 }
 
-// 处理搜索框获得焦点
-function onSearchFocus() {
-  showSearchResults.value = true
-}
-
-// 处理搜索框失去焦点（延迟关闭，以便点击结果）
-function onSearchBlur() {
-  setTimeout(() => {
-    showSearchResults.value = false
-  }, 200)
-}
+// 有内容时结果区一直展示，不收起到 onSearchBlur；仅当清空搜索框时收起
 
 // 处理外院人数输入
 function onNonYpNumInput(e: any) {
@@ -231,24 +219,30 @@ function removeStudent(id: string) {
   }
 }
 
-// 一键添加所有可用成员，member_ids 格式: ["user1", "ztr"]
-function addAllMembers() {
+// 一键添加所有可用成员，member_ids 格式: ["user1", "ztr"]，并通过搜索解析姓名
+async function addAllMembers() {
   const memberIds = data.value?.member_ids || []
-  let addedCount = 0
-  memberIds.forEach((id) => {
-    const sid = String(id)
-    if (!formData.students.includes(sid)) {
-      formData.students.push(sid)
-      memberNames.value[sid] = sid
-      addedCount++
-    }
-  })
-  if (addedCount > 0) {
-    uni.showToast({ title: `已添加 ${addedCount} 人`, icon: 'none' })
-  }
-  else {
+  const toAdd = memberIds
+    .map(id => String(id))
+    .filter(sid => !formData.students.includes(sid))
+  if (toAdd.length === 0) {
     uni.showToast({ title: '没有可添加的成员', icon: 'none' })
+    return
   }
+  toAdd.forEach(sid => formData.students.push(sid))
+  // 通过 searchUsers 按 id 解析姓名，避免列表显示 id
+  const results = await Promise.all(
+    toAdd.map(sid =>
+      searchUsers({ query: sid, limit: 10 }).then((list) => {
+        const user = list.find(u => String(u.id) === sid)
+        return { sid, name: user ? user.name : sid }
+      }),
+    ),
+  )
+  results.forEach(({ sid, name }) => {
+    memberNames.value[sid] = name
+  })
+  uni.showToast({ title: `已添加 ${toAdd.length} 人`, icon: 'none' })
 }
 
 // 清空所有成员
@@ -581,8 +575,6 @@ function goBack() {
             v-model="searchQuery"
             class="flex-1 bg-transparent py-2 text-sm"
             placeholder="输入学号或姓名搜索"
-            @focus="onSearchFocus"
-            @blur="onSearchBlur"
           >
           <div
             v-if="searchQuery"
@@ -591,9 +583,9 @@ function goBack() {
           />
         </view>
 
-        <!-- 搜索加载中（向上弹出，避免被键盘遮挡） -->
+        <!-- 搜索加载中（向上弹出，避免被键盘遮挡）；有内容时一直展示 -->
         <view
-          v-if="showSearchResults && searchQuery && searchLoading"
+          v-if="searchQuery.trim() && searchLoading"
           class="absolute bottom-full left-4 right-4 z-20 mb-1 border border-gray-200 rounded-lg bg-white px-4 py-4 text-center shadow-lg"
         >
           <uv-loading-icon mode="circle" size="20" />
@@ -602,7 +594,7 @@ function goBack() {
 
         <!-- 搜索结果（向上弹出，避免被键盘遮挡） -->
         <view
-          v-else-if="showSearchResults && searchQuery && searchResults.length > 0"
+          v-else-if="searchQuery.trim() && searchResults.length > 0"
           class="absolute bottom-full left-4 right-4 z-20 mb-1 max-h-60 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg"
         >
           <view
@@ -625,7 +617,7 @@ function goBack() {
 
         <!-- 无搜索结果 -->
         <view
-          v-else-if="showSearchResults && searchQuery && !searchLoading && searchResults.length === 0"
+          v-else-if="searchQuery.trim() && !searchLoading && searchResults.length === 0"
           class="absolute bottom-full left-4 right-4 z-20 mb-1 border border-gray-200 rounded-lg bg-white px-4 py-6 text-center shadow-lg"
         >
           <div class="i-carbon-search mx-auto mb-2 text-2xl text-gray-300" />
