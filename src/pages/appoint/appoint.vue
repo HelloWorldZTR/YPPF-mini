@@ -149,6 +149,12 @@ function goToMyAppointments() {
     url: `/pages/me/my-appointments`,
   })
 }
+
+function formatTime(time: string) {
+  // HH:MM:SS => HH:MM
+  const hms = time.split(':')
+  return `${hms[0]}:${hms[1]}`
+}
 </script>
 
 <template>
@@ -201,38 +207,29 @@ function goToMyAppointments() {
           <view
             v-for="room in currentRooms"
             :key="room.Rid"
-            class="mb-3 overflow-hidden border rounded-lg bg-white shadow-lg"
-            :class="{
-              'border-green-200': room.Rstatus === 0,
-              'border-orange-200': room.Rstatus === 1,
-              'border-red-200': room.Rstatus === 2,
-            }"
+            class="mb-3 overflow-hidden border border-gray-200 rounded-lg bg-white shadow-lg"
             @click="goToAppointRoom(room)"
           >
-            <!-- 房间头部 -->
-            <view
-              class="border-b px-4 py-3"
-              :class="{
-                'border-green-100 from-green-50 to-emerald-50 bg-gradient-to-r': room.Rstatus === 0,
-                'border-orange-100 from-orange-50 to-yellow-50 bg-gradient-to-r': room.Rstatus === 1,
-                'border-red-100 from-red-50 to-pink-50 bg-gradient-to-r': room.Rstatus === 2,
-              }"
-            >
-              <view class="flex items-start justify-between gap-2">
-                <view class="flex-1">
-                  <view class="text-sm text-gray-600">
+            <!-- 房间头部：蓝色渐变 -->
+            <view class="border-b border-white/20 from-[var(--primary-color)] to-[var(--primary-dark)] bg-gradient-to-r px-4 py-3">
+              <view class="flex items-center justify-between gap-2">
+                <view class="min-w-0 flex-1">
+                  <view class="text-base text-white font-bold">
                     {{ room.Rid }}
                   </view>
-                  <view class="text-base text-gray-800 font-bold">
+                  <view class="text-sm text-white/90">
                     {{ room.Rtitle }}
                   </view>
                 </view>
-                <uv-tag
-                  :type="getRoomStatusColor(room.Rstatus)"
-                  :text="getRoomStatusText(room)"
-                  plain
-                  size="mini"
-                />
+                <view class="flex shrink-0 items-center gap-2">
+                  <uv-tag
+                    :type="getRoomStatusColor(room.Rstatus)"
+                    :text="getRoomStatusText(room)"
+                    plain
+                    size="mini"
+                  />
+                  <view class="i-carbon-arrow-right text-lg text-white" />
+                </view>
               </view>
             </view>
 
@@ -241,20 +238,20 @@ function goToMyAppointments() {
               <!-- 容纳人数 -->
               <view class="flex items-center text-sm text-gray-700">
                 <div class="i-carbon-group mr-2 text-lg text-blue-500" />
-                <text>容纳人数：{{ room.Rmin }} - {{ room.Rmax }} 人</text>
+                <text>{{ room.Rmin }} - {{ room.Rmax }} 人</text>
               </view>
 
               <!-- 开放时间 -->
               <view class="flex items-center text-sm text-gray-700">
                 <div class="i-carbon-time mr-2 text-lg text-blue-500" />
-                <text>开放时间：{{ room.Rstart }} - {{ room.Rfinish }}</text>
+                <text>{{ formatTime(room.Rstart) }} - {{ formatTime(room.Rfinish) }}</text>
               </view>
 
-              <!-- 当前使用人数 -->
-              <view v-if="room.Rpresent > 0" class="flex items-center text-sm text-gray-700">
+              <!-- 当前使用人数（已注释） -->
+              <!-- <view v-if="room.Rpresent > 0" class="flex items-center text-sm text-gray-700">
                 <div class="i-carbon-user mr-2 text-lg text-blue-500" />
                 <text>当前使用：{{ room.Rpresent }} 人</text>
-              </view>
+              </view> -->
 
               <!-- 是否需要协议 -->
               <view v-if="room.RneedAgree" class="flex items-center text-sm text-orange-600">
@@ -267,21 +264,6 @@ function goToMyAppointments() {
                 <div class="i-carbon-moon mr-2 text-lg" />
                 <text>支持通宵使用</text>
               </view>
-            </view>
-
-            <!-- 操作按钮 -->
-            <view class="border-t border-gray-100 px-4 py-3">
-              <button
-                class="w-full rounded-lg py-2 text-sm font-medium"
-                :class="{
-                  'bg-green-500 text-white': room.Rstatus === 0,
-                  'bg-orange-400 text-white': room.Rstatus === 1,
-                  'bg-gray-300 text-gray-500': room.Rstatus === 2,
-                }"
-                :disabled="room.Rstatus === 2"
-              >
-                {{ room.Rstatus === 2 ? '暂不可预约' : '预约房间' }}
-              </button>
             </view>
           </view>
 
@@ -306,9 +288,8 @@ function goToMyAppointments() {
   @include flex;
   align-items: center;
   justify-content: space-between;
-  border-width: 1px;
-  border-radius: 100px;
-  border-color: #dadbde;
+  border: 1px solid #dadbde;
+  border-radius: 150px;
   padding: 3px 7px;
   opacity: 0.8;
 }

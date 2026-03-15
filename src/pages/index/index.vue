@@ -6,6 +6,7 @@ import { getActivityOverview } from '@/api/activity'
 import { getCarouselList } from '@/api/carousel'
 import { everydaySignIn, getUserMe } from '@/api/login'
 import ActivityCard from '@/components/ActivityCard.vue'
+import { usePageRefresh } from '@/hooks/usePageRefresh'
 import { toBackendURL } from '@/utils'
 
 defineOptions({
@@ -88,6 +89,39 @@ function onCarouselClick(index: number) {
   }
 }
 
+// 轮播 + 活动数据刷新（页面显示时自动刷新，如从其他页返回）
+const { refresh } = usePageRefresh(
+  async () => {
+    try {
+      carouselLoading.value = true
+      const res = await getCarouselList()
+      carouselList.value = res?.items ?? []
+      for (const item of carouselList.value) {
+        item.image = toBackendURL(item.image)
+      }
+    }
+    catch (error) {
+      console.error('轮播列表获取失败:', error)
+    }
+    finally {
+      carouselLoading.value = false
+    }
+
+    try {
+      activityLoading.value = true
+      activityOverview.value = await getActivityOverview()
+      updateCurrentActivities('recent')
+    }
+    catch (error) {
+      console.error('活动数据获取失败:', error)
+    }
+    finally {
+      activityLoading.value = false
+    }
+  },
+  { immediate: false },
+)
+
 onMounted(async () => {
   // 未登录时先请求一次个人信息，统一在进入页面前完成 401 → 绑定页跳转，避免签到、活动等多个接口连续触发多次跳转
   try {
@@ -112,34 +146,7 @@ onMounted(async () => {
     console.error('每日签到失败:', error)
   }
 
-  try {
-    carouselLoading.value = true
-    const res = await getCarouselList()
-    carouselList.value = res?.items ?? []
-    for (const item of carouselList.value) {
-      item.image = toBackendURL(item.image)
-    }
-  }
-  catch (error) {
-    console.error('轮播列表获取失败:', error)
-  }
-  finally {
-    carouselLoading.value = false
-  }
-
-  // 加载活动首页数据
-  try {
-    activityLoading.value = true
-    activityOverview.value = await getActivityOverview()
-    // 初始化当前活动列表（默认显示近期活动）
-    updateCurrentActivities('recent')
-  }
-  catch (error) {
-    console.error('活动数据获取失败:', error)
-  }
-  finally {
-    activityLoading.value = false
-  }
+  await refresh()
 })
 
 function onActivityCardClick(id: number) {
