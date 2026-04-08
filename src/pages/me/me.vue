@@ -118,7 +118,8 @@ const menuItems = [
   // { title: '关于我们', icon: 'i-carbon-information', onClick: handleNothing },
   { title: '切换账户', icon: 'i-carbon-collaborate', onClick: () => uni.navigateTo({ url: '/pages/me/my-accounts' }) },
   { title: '编辑个人资料', icon: 'i-carbon-user-profile', onClick: () => uni.navigateTo({ url: '/pages/generic/webview?uri=/userAccountSetting' }) },
-  { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
+  // Un-comment to debug
+  // { title: '调试信息', icon: 'i-carbon-debug', onClick: () => uni.navigateTo({ url: '/pages/me/debug' }) },
 ]
 
 function handleProfile() {
