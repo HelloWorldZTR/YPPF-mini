@@ -11,6 +11,7 @@ import {
   listPublicFeedback,
 } from '@/api/feedback'
 import { useUserStore } from '@/store/user'
+import { openWebview } from '@/utils'
 
 definePage({
   style: {
@@ -271,7 +272,7 @@ function onCardClick(item: Feedback) {
   }
   else {
     // 已发布：跳转详情页
-    uni.navigateTo({ url: `/pages/generic/webview?uri=/viewFeedback/${item.id}` })
+    void openWebview({ uri: `/viewFeedback/${item.id}` })
   }
 }
 

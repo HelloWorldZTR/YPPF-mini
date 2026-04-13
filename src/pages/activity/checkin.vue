@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { IActivitySummary } from '@/api/types/activity'
 import { checkInActivity, getActivityInfo } from '@/api/activity'
+import { openWebview } from '@/utils'
 
 definePage({
   style: {
@@ -70,9 +71,7 @@ async function handleCheckIn() {
     // 展示详情
     // TODO: 改成原生的
     setTimeout(() => {
-      uni.navigateTo({
-        url: `/pages/generic/webview?uri=/viewActivity/${activityId.value}`,
-      })
+      void openWebview({ uri: `/viewActivity/${activityId.value}` })
     }, 1000)
   }
   catch (error) {

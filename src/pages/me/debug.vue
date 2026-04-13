@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store'
 import { useTokenStore } from '@/store/token'
+import { openWebview } from '@/utils'
 import { setGlobalError } from '@/utils/globalError'
 
 const userStore = useUserStore()
@@ -31,7 +32,7 @@ function handleForceRelogin() {
 }
 
 function handleNavigateToWebview() {
-  uni.navigateTo({ url: '/pages/generic/webview?uri=/' })
+  void openWebview({ uri: '/' })
 }
 </script>
 

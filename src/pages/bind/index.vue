@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { getUserMe, wxBind } from '@/api/login'
 import { useTokenStore } from '@/store/token'
 import { useUserStore } from '@/store/user'
+import { openWebview } from '@/utils'
 
 definePage({
   style: {
@@ -18,9 +19,8 @@ const agreedToTerms = ref(false)
 const tokenStore = useTokenStore()
 const userStore = useUserStore()
 
-function openWebview(uri: string, isPublic = true) {
-  const params = `uri=${uri}&public=${isPublic ? '1' : '0'}`
-  uni.navigateTo({ url: `/pages/generic/webview?${params}` })
+function openPublicWebview(uri: string) {
+  void openWebview({ uri, isPublic: true })
 }
 
 function toTerms() {
@@ -117,9 +117,9 @@ async function handleBind() {
         >
       </view>
       <view class="bind-links">
-        <text class="bind-link" @click="openWebview('/forgetpw/')">忘记密码</text>
+        <text class="bind-link" @click="openPublicWebview('/forgetpw/')">忘记密码</text>
         <text class="bind-link bind-link--divider">|</text>
-        <text class="bind-link" @click="openWebview('/freshman/')">注册</text>
+        <text class="bind-link" @click="openPublicWebview('/freshman/')">注册</text>
       </view>
 
       <view class="bind-agree" @click="agreedToTerms = !agreedToTerms">

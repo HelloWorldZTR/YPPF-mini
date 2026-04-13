@@ -7,7 +7,7 @@ import { getCarouselList } from '@/api/carousel'
 import { everydaySignIn, getUserMe } from '@/api/login'
 import ActivityCard from '@/components/ActivityCard.vue'
 import { usePageRefresh } from '@/hooks/usePageRefresh'
-import { toBackendURL } from '@/utils'
+import { openWebview, toBackendURL } from '@/utils'
 
 defineOptions({
   name: 'Home',
@@ -72,7 +72,7 @@ function getNavbarHeight() {
   return navbarHeight + statusBarHeight
 }
 
-function onCarouselClick(index: number) {
+async function onCarouselClick(index: number) {
   const item = carouselList.value[index]
   if (!item?.redirect_url)
     return
@@ -81,7 +81,7 @@ function onCarouselClick(index: number) {
     window.open(item.redirect_url)
     // #endif
     // #ifndef H5
-    uni.navigateTo({ url: `/pages/generic/webview?uri=${encodeURIComponent(item.redirect_url)}` })
+    await openWebview({ uri: item.redirect_url })
     // #endif
   }
   else {
@@ -150,7 +150,7 @@ onMounted(async () => {
 })
 
 function onActivityCardClick(id: number) {
-  uni.navigateTo({ url: `/pages/generic/webview?uri=/viewActivity/${id}` })
+  void openWebview({ uri: `/viewActivity/${id}` })
 }
 </script>
 
